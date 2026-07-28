@@ -20,10 +20,10 @@ def run_flask():
     app.run(host='0.0.0.0', port=port)
 
 # 2. CREDENCIAIS (Token fixo e username atualizado)
-TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVsw'
+TOKEN = '8950805985:AAF0i9-pXNWt47xYFYQaWFAzZMSepQ9G9pc'
 CANAL_ID = '@setupdaestrada'
 LINK_REVOLUT = 'https://revolut.me/guilhevb38'
-USERNAME_BOT = 'Setup_da_Estrada_Bot' 
+USERNAME_BOT = 'EstafetaBot' 
 
 bot = telebot.TeleBot(TOKEN)
 
