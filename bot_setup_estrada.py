@@ -13,7 +13,7 @@ import threading
 app = Flask('')
 @app.route('/')
 def home():
-    return "🤖 EstafetaBot: Painel Inline, Radar & Reaparecimento Automático a funcionar!"
+    return "🤖 EstafetaBot: Painel Inline, Radar & Estado Inteligente a funcionar!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
@@ -26,6 +26,9 @@ LINK_REVOLUT = 'https://revolut.me/guilhevb38'
 USERNAME_BOT = 'oEstafeta_bot' 
 
 bot = telebot.TeleBot(TOKEN)
+
+# Conjunto para controlar quem pediu para configurar a cidade
+aguardando_cidade = set()
 
 # 3. GESTÃO DE DADOS (JSON)
 def carregar_json(ficheiro):
@@ -67,7 +70,7 @@ def painel_privado(message):
         return 
     enviar_menu_reutilizavel(message.chat.id)
 
-# 5. GESTÃO DOS CLIQUES DOS BOTÕES NO CHAT (Com temporizador de 10s)
+# 5. GESTÃO DOS CLIQUES DOS BOTÕES NO CHAT
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     chat_id = call.message.chat.id
@@ -92,8 +95,9 @@ def callback_handler(call):
             bot.send_message(chat_id, text=f"💡 **DICA DA ESTRADA** 💡\n\n{dica}", parse_mode='Markdown')
             
     elif call.data == 'cmd_cidade_info':
-        aviso = "📍 **RADAR METEOROLÓGICO**\n\nPara ativar os alertas automáticos, escreve apenas o nome da tua cidade (ex: *Coimbra* ou *Lousã*)."
-        bot.send_message(chat_id, text=aviso, parse_mode='Markdown')
+        aguardando_cidade.add(chat_id)
+        aviso = "📍 **RADAR METEOROLÓGICO**\n\nEscreve agora o nome da tua cidade (ex: *Coimbra* ou *Lousã*) para ativar os alertas automáticos!"
+        bot.send_message(chat_id, aviso, parse_mode='Markdown')
         
     elif call.data == 'cmd_clear':
         chat_id_str = str(chat_id)
@@ -101,11 +105,12 @@ def callback_handler(call):
         if chat_id_str in utilizadores:
             del utilizadores[chat_id_str]
             guardar_json('utilizadores.json', utilizadores)
+        if chat_id in aguardando_cidade:
+            aguardando_cidade.remove(chat_id)
         bot.send_message(chat_id, "🧹 **Memória limpa!** O teu registo de cidade foi apagado.", parse_mode='Markdown')
         
     bot.answer_callback_query(call.id)
     
-    # ⏱️ Passados 10 segundos, os botões reaparecem automaticamente em baixo
     threading.Timer(10.0, enviar_menu_reutilizavel, args=[chat_id]).start()
 
 # 6. COMANDO /clear POR TEXTO
@@ -113,19 +118,30 @@ def callback_handler(call):
 def comando_clear_texto(message):
     if message.chat.type != 'private':
         return
-    chat_id = str(message.chat.id)
+    chat_id = message.chat.id
+    chat_id_str = str(chat_id)
     utilizadores = carregar_json('utilizadores.json')
-    if chat_id in utilizadores:
-        del utilizadores[chat_id]
+    if chat_id_str in utilizadores:
+        del utilizadores[chat_id_str]
         guardar_json('utilizadores.json', utilizadores)
-    bot.send_message(message.chat.id, "🧹 **Memória limpa!** O teu registo de cidade foi apagado.", parse_mode='Markdown')
+    if chat_id in aguardando_cidade:
+        aguardando_cidade.remove(chat_id)
+        
+    bot.send_message(chat_id, "🧹 **Memória limpa!** O teu registo de cidade foi apagado.", parse_mode='Markdown')
     enviar_menu_reutilizavel(chat_id)
 
-# 7. GESTÃO DA CIDADE COM RESPOSTA IMEDIATA E DETALHADA
+# 7. GESTÃO INTELIGENTE DE TEXTO
 @bot.message_handler(func=lambda message: message.chat.type == 'private' and not message.text.startswith('/'))
-def capturar_cidade(message):
+def capturar_texto_livre(message):
+    chat_id = message.chat.id
+    
+    if chat_id not in aguardando_cidade:
+        bot.send_message(chat_id, "⚠️ Para interagir com o bot, usa os botões abaixo ou escreve `/menu`.", parse_mode='Markdown')
+        enviar_menu_reutilizavel(chat_id)
+        return
+        
     cidade = message.text.strip()
-    chat_id = str(message.chat.id)
+    chat_id_str = str(chat_id)
     
     try:
         geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={cidade}&count=1&language=pt&format=json"
@@ -145,8 +161,10 @@ def capturar_cidade(message):
             vento = meteo_req['current']['wind_speed_10m']
             
             utilizadores = carregar_json('utilizadores.json')
-            utilizadores[chat_id] = nome_real
+            utilizadores[chat_id_str] = nome_real
             guardar_json('utilizadores.json', utilizadores)
+            
+            aguardando_cidade.remove(chat_id)
             
             resposta = f"""
 ✅ **RADAR ATIVADO COM SUCESSO!** 🚀
@@ -159,16 +177,17 @@ def capturar_cidade(message):
 • Precipitação: **{chuva} mm**
 • Vento: **{vento} km/h**
 """
-            bot.send_message(message.chat.id, resposta, parse_mode='Markdown')
-            
-            # Reenvia o menu após 3 segundos para facilitar novas interações após configurar a cidade
+            bot.send_message(chat_id, resposta, parse_mode='Markdown')
             threading.Timer(3.0, enviar_menu_reutilizavel, args=[chat_id]).start()
         else:
-            bot.send_message(message.chat.id, "⚠️ Não encontrei essa cidade. Tenta escrever novamente (ex: *Coimbra* ou *Lousã*).", parse_mode='Markdown')
+            bot.send_message(chat_id, "⚠️ Não encontrei essa cidade. Tenta escrever novamente (ex: *Coimbra* ou *Lousã*).", parse_mode='Markdown')
     except Exception as e:
-        bot.send_message(message.chat.id, "⚠️ Ocorreu um erro ao consultar o radar. Tenta novamente mais tarde.", parse_mode='Markdown')
+        if chat_id in aguardando_cidade:
+            aguardando_cidade.remove(chat_id)
+        bot.send_message(chat_id, "⚠️ Ocorreu um erro ao consultar o radar. Tenta novamente mais tarde.", parse_mode='Markdown')
+        enviar_menu_reutilizavel(chat_id)
 
-# 8. MOTOR DO RADAR (Background - verifica de 1 em 1 hora)
+# 8. MOTOR DO RADAR (Background)
 def radar_meteorologico():
     print("🌤️ Radar Meteorológico ativado!")
     cidades_em_alerta = {} 
@@ -254,7 +273,7 @@ def auto_poster():
                 dica = random.choice(dicas)
                 bot.send_message(CANAL_ID, f"💡 **DICA DA HORA DE ALMOÇO** 💡\n\n{dica}", parse_mode='Markdown')
             elif 20 <= hora_atual <= 23:
-                premium = [p for p in produtos if p.get('premium'] == True]
+                premium = [p for p in produtos if p.get('premium') == True]
                 if premium:
                     prod = random.choice(premium)
                     bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
@@ -274,5 +293,5 @@ if __name__ == "__main__":
     threading.Thread(target=radar_meteorologico, daemon=True).start()
     threading.Thread(target=auto_menu, daemon=True).start() 
     
-    print("🎧 Bot online com Temporizador Automático de 10s...")
+    print("🎧 EstafetaBot online com erro corrigido...")
     bot.infinity_polling(skip_pending=True)
