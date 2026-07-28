@@ -2,180 +2,125 @@ import telebot
 import time
 import random
 import os
+import json
+from datetime import datetime
 from flask import Flask
 import threading
 
-# -------------------------------------------------------------
-# 1. SERVIDOR FLASK (Para a nuvem não adormecer)
-# -------------------------------------------------------------
+# 1. SERVIDOR FLASK
 app = Flask('')
-
 @app.route('/')
 def home():
-    return "🤖 Bot Setup da Estrada a funcionar a 100% na nuvem!"
+    return "🤖 Servidor Flask e Bot a funcionar em simultâneo!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# -------------------------------------------------------------
-# 2. CREDENCIAIS E CONFIGURAÇÕES
-# -------------------------------------------------------------
+# 2. CREDENCIAIS E LINKS
 TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVsw'
 CANAL_ID = '@setupdaestrada'
-TAG_AFILIADO = 'setupdaestrad-21'
+LINK_REVOLUT = 'https://revolut.me/guilhevb38' # Substitui pelo teu link do Revolut
 
 bot = telebot.TeleBot(TOKEN)
 
-# -------------------------------------------------------------
-# 3. CATÁLOGOS (PRODUTOS E DICAS)
-# -------------------------------------------------------------
-lista_promocoes = [
-    {
-        "nome": "Powerbank 20000mAh de Alta Capacidade para Turnos Longos",
-        "preco_antigo": "49.99€",
-        "preco_novo": "34.99€",
-        "link": f"https://www.amazon.es/s?k=powerbank+20000mah+carga+rapida&tag={TAG_AFILIADO}",
-        "imagem": "https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?q=80&w=800&auto=format&fit=crop"
-    },
-    {
-        "nome": "Suporte de Telemóvel para Mota com Amortecedor de Vibração",
-        "preco_antigo": "59.90€",
-        "preco_novo": "45.00€",
-        "link": f"https://www.amazon.es/s?k=suporte+telemovel+mota+antivibracao&tag={TAG_AFILIADO}",
-        "imagem": "https://images.unsplash.com/photo-1558981806-ec527fa84c39?q=80&w=800&auto=format&fit=crop"
-    },
-    {
-        "nome": "Cadeado de Disco para Mota com Alarme Sonoro Sensível",
-        "preco_antigo": "39.99€",
-        "preco_novo": "24.99€",
-        "link": f"https://www.amazon.es/s?k=cadeado+disco+mota+alarme&tag={TAG_AFILIADO}",
-        "imagem": "https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?q=80&w=800&auto=format&fit=crop"
-    },
-    {
-        "nome": "Luvas Térmicas e Impermeáveis para Inverno e Chuva",
-        "preco_antigo": "45.00€",
-        "preco_novo": "29.99€",
-        "link": f"https://www.amazon.es/s?k=luvas+impermeaveis+mota+inverno&tag={TAG_AFILIADO}",
-        "imagem": "https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?q=80&w=800&auto=format&fit=crop"
-    },
-    {
-        "nome": "Intercomunicador Bluetooth para Capacete de Mota",
-        "preco_antigo": "89.99€",
-        "preco_novo": "59.99€",
-        "link": f"https://www.amazon.es/s?k=intercomunicador+capacete+mota&tag={TAG_AFILIADO}",
-        "imagem": "https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop"
-    },
-    {
-        "nome": "Carregador USB Duplo de Instalação no Guiador da Mota",
-        "preco_antigo": "25.00€",
-        "preco_novo": "15.99€",
-        "link": f"https://www.amazon.es/s?k=carregador+usb+guiador+mota&tag={TAG_AFILIADO}",
-        "imagem": "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?q=80&w=800&auto=format&fit=crop"
-    },
-    {
-        "nome": "Capa de Chuva Completa Impermeável para Motociclistas",
-        "preco_antigo": "40.00€",
-        "preco_novo": "26.99€",
-        "link": f"https://www.amazon.es/s?k=capa+chuva+completa+mota&tag={TAG_AFILIADO}",
-        "imagem": "https://images.unsplash.com/photo-1558981285-6f0c94958bb6?q=80&w=800&auto=format&fit=crop"
-    }
-]
+# 3. CARREGAR DADOS (ARQUITETURA JSON)
+def carregar_json(ficheiro):
+    with open(ficheiro, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
-lista_dicas = [
-    "📦 **Organização da Top Box:** Top boxes rígidas são excelentes para a segurança, mas os pedidos pequenos balançam muito. Leva sempre uma toalha limpa grossa ou plástico de bolhas para preencheres o espaço vazio. Evita molhos derramados em ruas de calçada!",
-    "⛈️ **Tração na Chuva:** A calçada molhada e as grelhas de esgoto são os maiores inimigos nas subidas íngremes. Nestes dias, reduz a pressão dos pneus ligeiramente (cerca de 2 a 3 psi) para ganhares mais superfície de contacto e aderência.",
-    "🔋 **Frio e Baterias:** Nos turnos de inverno, o frio drena a bateria do telemóvel até 30% mais rápido. Mantém a tua powerbank perto do corpo (dentro do casaco) e passa apenas o cabo para fora, o calor corporal ajuda a manter a eficiência da bateria.",
-    "🏍️ **Corrente Saudável:** Apanhaste uma bátega de água a meio do turno? Assim que chegares a casa, passa um spray lubrificante na corrente enquanto ela ainda está quente. Evita ferrugem e poupa-te muitos euros na oficina a longo prazo.",
-    "🚦 **Olhos na Estrada:** Em cruzamentos cegos ou entroncamentos apertados, não olhes só para os carros, olha para os reflexos nas montras das lojas. Muitas vezes consegues ver se vem lá um carro antes sequer de ele chegar à esquina.",
-    "🍔 **Gestão de Restaurantes:** O restaurante disse 'são só mais 5 minutinhos'? Aproveita esse tempo para verificares a pressão dos pneus, limpar a viseira do capacete ou responderes a mensagens. O tempo de espera é o teu tempo de manutenção."
-]
-
-# -------------------------------------------------------------
-# 4. FUNÇÕES DE PUBLICAÇÃO
-# -------------------------------------------------------------
-def publicar_promocao(promo):
-    mensagem = f"""
-🔥 **SETUP DA ESTRADA: OPORTUNIDADE** 🔥
-
+# 4. FUNÇÕES DE FORMATAÇÃO
+def formatar_promo(promo):
+    return f"""
+🔥 **OPORTUNIDADE** 🔥
 📦 **Produto:** {promo['nome']}
 
 ❌ **Preço Habitual:** ~{promo['preco_antigo']}~
 ✅ **Preço de Desconto:** {promo['preco_novo']}
 
-👉 **[Ver Opções na Amazon com Desconto]({promo['link']})**
-    """
-    try:
-        bot.send_photo(chat_id=CANAL_ID, photo=promo['imagem'], caption=mensagem, parse_mode='Markdown')
-        print(f"✅ Produto publicado: {promo['nome']}")
-    except Exception as erro:
-        print(f"❌ Erro ao publicar produto: {erro}")
+👉 **[Ver na Amazon com Desconto]({promo['link']})**
+"""
 
-def publicar_dica(dica):
-    mensagem = f"""
-💡 **DICA DA ESTRADA** 💡
+# 5. COMANDOS INTERATIVOS DO UTILIZADOR
+@bot.message_handler(commands=['promo'])
+def comando_promo(message):
+    produtos = carregar_json('produtos.json')
+    produto = random.choice(produtos)
+    bot.send_photo(message.chat.id, photo=produto['imagem'], caption=formatar_promo(produto), parse_mode='Markdown')
 
-{dica}
+@bot.message_handler(commands=['chuva'])
+def comando_chuva(message):
+    produtos = carregar_json('produtos.json')
+    produtos_chuva = [p for p in produtos if p.get('categoria') == 'chuva']
+    if produtos_chuva:
+        produto = random.choice(produtos_chuva)
+        bot.send_photo(message.chat.id, photo=produto['imagem'], caption=formatar_promo(produto), parse_mode='Markdown')
 
-👉 *Partilha o canal com os teus colegas para não perderem as dicas e os descontos!*
-    """
-    try:
-        bot.send_message(chat_id=CANAL_ID, text=mensagem, parse_mode='Markdown')
-        print("✅ Dica publicada com sucesso!")
-    except Exception as erro:
-        print(f"❌ Erro ao publicar dica: {erro}")
+@bot.message_handler(commands=['dica'])
+def comando_dica(message):
+    dicas = carregar_json('dicas.json')
+    dica = random.choice(dicas)
+    msg = f"💡 **DICA DA ESTRADA** 💡\n\n{dica}"
+    bot.send_message(message.chat.id, text=msg, parse_mode='Markdown')
 
-# -------------------------------------------------------------
-# 5. CICLO DO BOT EM BACKGROUND (COM INTELIGÊNCIA)
-# -------------------------------------------------------------
-def loop_bot():
-    print("🤖 Bot 'Setup da Estrada' iniciado! Misto de Ofertas e Dicas a rodar.")
-    historico_recentes = []
-    historico_dicas = []
-    
-    contador_ciclos = 1
-    
-    # Pausa inicial
+@bot.message_handler(commands=['cafe'])
+def comando_cafe(message):
+    msg = f"""
+☕ **Gostaste das dicas ou poupaste dinheiro com o bot?** 
+
+Se quiseres dar uma força ao projeto, podes pagar-me um café rapidamente e sem taxas através do Revolut:
+👉 **[Pagar um Café pelo Revolut]({LINK_REVOLUT})**
+
+Obrigado pela força e boas entregas! 🚀
+"""
+    bot.send_message(message.chat.id, text=msg, parse_mode='Markdown', disable_web_page_preview=True)
+
+# 6. CICLO INTELIGENTE AUTOMÁTICO (THREAD SEPARADA)
+def auto_poster():
+    print("🤖 Modo Automático Iniciado.")
     time.sleep(10)
     
     while True:
         try:
-            # A cada 5 ciclos (ex: 5 produtos publicados), publica uma dica em vez de um produto
-            if contador_ciclos % 5 == 0:
-                dicas_disponiveis = [d for d in lista_dicas if d not in historico_dicas]
-                if not dicas_disponiveis:
-                    dicas_disponiveis = lista_dicas
-                    historico_dicas.clear()
-                    
-                dica_escolhida = random.choice(dicas_disponiveis)
-                publicar_dica(dica_escolhida)
-                historico_dicas.append(dica_escolhida)
+            hora_atual = datetime.now().hour
+            produtos = carregar_json('produtos.json')
+            dicas = carregar_json('dicas.json')
             
-            # Caso contrário, publica a promoção normal
+            # Lógica de Horários
+            if 12 <= hora_atual <= 14:
+                # Hora de almoço: Postar uma dica
+                dica = random.choice(dicas)
+                bot.send_message(CANAL_ID, f"💡 **DICA DA HORA DE ALMOÇO** 💡\n\n{dica}", parse_mode='Markdown')
+            
+            elif 20 <= hora_atual <= 23:
+                # Noite: Postar produtos Premium (maior comissão quando o pessoal está em casa)
+                premium = [p for p in produtos if p.get('premium') == True]
+                if premium:
+                    prod = random.choice(premium)
+                    bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
+            
             else:
-                produtos_disponiveis = [p for p in lista_promocoes if p['nome'] not in historico_recentes]
-                if not produtos_disponiveis:
-                    produtos_disponiveis = lista_promocoes
-                    historico_recentes.clear()
-                    
-                produto_escolhido = random.choice(produtos_disponiveis)
-                publicar_promocao(produto_escolhido)
-                historico_recentes.append(produto_escolhido['nome'])
+                # Resto do dia: Publicação normal
+                prod = random.choice(produtos)
+                bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
                 
-                if len(historico_recentes) > 3:
-                    historico_recentes.pop(0)
-            
-            contador_ciclos += 1
-            
         except Exception as e:
-            print(f"⚠️ Erro no ciclo: {e}")
+            print(f"⚠️ Erro no Auto-Poster: {e}")
             
-        # Podes alterar este valor. 30 * 60 = 30 minutos.
-        time.sleep(2 * 60)
+        time.sleep(30 * 60) # Pausa de 30 minutos
 
+# 7. INICIAR TODAS AS TAREFAS
 if __name__ == "__main__":
-    t = threading.Thread(target=loop_bot)
-    t.daemon = True
-    t.start()
+    # Arranca o servidor Flask
+    t_flask = threading.Thread(target=run_flask)
+    t_flask.daemon = True
+    t_flask.start()
     
-    run_flask()
+    # Arranca as publicações automáticas
+    t_poster = threading.Thread(target=auto_poster)
+    t_poster.daemon = True
+    t_poster.start()
+    
+    # Mantém o Bot à escuta dos comandos dos utilizadores
+    print("🎧 Bot à escuta de comandos...")
+    bot.polling(non_stop=True)
