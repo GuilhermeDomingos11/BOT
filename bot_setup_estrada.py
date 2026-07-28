@@ -98,7 +98,7 @@ def callback_handler(call):
             
     elif call.data == 'cmd_chuva':
         produtos = carregar_json('produtos.json')
-        produtos_chuva = [p for p in produtos if p.get('categoria'] == 'chuva']
+        produtos_chuva = [p for p in produtos if p.get('categoria') == 'chuva']
         if produtos_chuva:
             prod = random.choice(produtos_chuva)
             bot.send_photo(chat_id, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
