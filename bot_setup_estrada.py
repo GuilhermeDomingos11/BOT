@@ -69,7 +69,7 @@ def comandos_basicos(message):
         msg = f"☕ **Gostaste das dicas ou poupaste dinheiro?**\nPodes dar uma força ao projeto pagando-me um café sem taxas pelo Revolut:\n👉 **[Pagar um Café pelo Revolut]({LINK_REVOLUT})**\n\nObrigado e boas entregas! 🚀"
         bot.send_message(message.chat.id, text=msg, parse_mode='Markdown', disable_web_page_preview=True)
 
-# 5. NOVO SISTEMA: ALERTAS METEOROLÓGICOS (Apenas em Privado)
+# 5. SISTEMA: ALERTAS METEOROLÓGICOS (Apenas em Privado)
 @bot.message_handler(commands=['alertas'])
 def comando_alertas(message):
     msg = """
@@ -143,7 +143,7 @@ def radar_meteorologico():
             
         time.sleep(60 * 60)
 
-# 7. MENU AUTOMÁTICO DE INSTRUÇÕES (Corre em background - De 2 em 2 horas)
+# 7. MENU AUTOMÁTICO DE INSTRUÇÕES (De 2 em 2 horas)
 def auto_menu():
     print("📋 Auto-Menu ativado!")
     time.sleep(15) 
@@ -193,7 +193,7 @@ def auto_poster():
         except Exception as e:
             print(f"⚠️ Erro detalhado no Auto-Poster: {e}")
             
-        time.sleep(30 * 60)
+        time.sleep(3 * 60)
 
 # 9. INICIAR TODAS AS TAREFAS
 if __name__ == "__main__":
