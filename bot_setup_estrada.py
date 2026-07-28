@@ -171,7 +171,7 @@ def loop_bot():
             print(f"⚠️ Erro no ciclo: {e}")
             
         # Podes alterar este valor. 30 * 60 = 30 minutos.
-        time.sleep(30 * 60)
+        time.sleep(2 * 60)
 
 if __name__ == "__main__":
     t = threading.Thread(target=loop_bot)
