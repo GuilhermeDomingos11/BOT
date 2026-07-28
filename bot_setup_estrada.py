@@ -13,14 +13,14 @@ import threading
 app = Flask('')
 @app.route('/')
 def home():
-    return "🤖 Setup da Estrada: Painel Premium & Radar a funcionar!"
+    return "🤖 Setup da Estrada: Teclado Persistente & Radar a funcionar!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
 # 2. CREDENCIAIS
-TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVsw'
+TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVSw'
 CANAL_ID = '@setupdaestrada'
 LINK_REVOLUT = 'https://revolut.me/guilhevb38'
 USERNAME_BOT = 'Setup_da_Estrada_Bot' 
@@ -42,75 +42,94 @@ def guardar_json(ficheiro, dados):
 def formatar_promo(promo):
     return f"🔥 **OPORTUNIDADE** 🔥\n📦 **Produto:** {promo['nome']}\n\n❌ **Preço Habitual:** ~{promo['preco_antigo']}~\n✅ **Preço de Desconto:** {promo['preco_novo']}\n\n👉 **[Ver na Amazon com Desconto]({promo['link']})**"
 
-# 4. PAINEL DE CONTROLO PREMIUM (Chat Privado com Botões Interativos)
+# 4. TECLADO FIXO NO FUNDO DO CHAT (Interface sem precisar de escrever)
+def criar_teclado_inferior():
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    btn_promo = types.KeyboardButton("🔥 Ver Promoção")
+    btn_chuva = types.KeyboardButton("🌧️ Equipamento Chuva")
+    btn_dica = types.KeyboardButton("💡 Dica da Estrada")
+    btn_alertas = types.KeyboardButton("⛈️ Configurar Alertas")
+    btn_cafe = types.KeyboardButton("☕ Pagar um Café")
+    btn_clear = types.KeyboardButton("🧹 Limpar / Reiniciar")
+    
+    markup.add(btn_promo, btn_chuva, btn_dica, btn_alertas, btn_cafe, btn_clear)
+    return markup
+
+# 5. COMANDOS DE ENTRADA (/start ou /menu)
 @bot.message_handler(commands=['start', 'menu'])
 def painel_privado(message):
     if message.chat.type != 'private':
         return 
         
-    markup = types.InlineKeyboardMarkup(row_width=2)
-    btn_alertas = types.InlineKeyboardButton("⛈️ Configurar Alertas", callback_data='cmd_cidade_info')
-    btn_promo = types.InlineKeyboardButton("🔥 Ver Promoção", callback_data='cmd_promo')
-    btn_chuva = types.InlineKeyboardButton("🌧️ Equipamento Chuva", callback_data='cmd_chuva')
-    btn_dica = types.InlineKeyboardButton("💡 Dica da Estrada", callback_data='cmd_dica')
-    btn_cafe = types.InlineKeyboardButton("☕ Pagar um Café", url=LINK_REVOLUT)
-    
-    markup.add(btn_alertas, btn_promo, btn_chuva, btn_dica, btn_cafe)
-    
     msg = f"""
 ⚡ **CENTRO DE COMANDO - SETUP DA ESTRADA** ⚡
 
-Olá, estafeta! Este é o teu painel privado de ferramentas para a estrada. 
-Clica nos botões abaixo para interagir instantaneamente com o sistema:
+Olá, estafeta! Este é o teu painel privado. Poca nos **botões em baixo** no teu telemóvel para aceder a tudo instantaneamente, sem precisar de escrever nada! 🚀
     """
-    bot.send_message(message.chat.id, text=msg, parse_mode='Markdown', reply_markup=markup)
+    bot.send_message(message.chat.id, text=msg, parse_mode='Markdown', reply_markup=criar_teclado_inferior())
 
-# 5. GESTÃO DOS CLIQUES NOS BOTÕES INTERATIVOS
-@bot.callback_query_handler(func=lambda call: True)
-def callback_handler(call):
-    chat_id = call.message.chat.id
+# 6. INTERAÇÃO POR BOTÕES FIXOS (Substitui os comandos de texto)
+@bot.message_handler(func=lambda message: message.text in [
+    "🔥 Ver Promoção", 
+    "🌧️ Equipamento Chuva", 
+    "💡 Dica da Estrada", 
+    "⛈️ Configurar Alertas", 
+    "☕ Pagar um Café", 
+    "🧹 Limpar / Reiniciar"
+])
+def lidar_botoes_fixos(message):
+    chat_id = message.chat.id
+    texto = message.text
     
-    if call.data == 'cmd_promo':
+    if texto == "🔥 Ver Promoção":
         produtos = carregar_json('produtos.json')
         if produtos:
             prod = random.choice(produtos)
             bot.send_photo(chat_id, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
             
-    elif call.data == 'cmd_chuva':
+    elif texto == "🌧️ Equipamento Chuva":
         produtos = carregar_json('produtos.json')
         produtos_chuva = [p for p in produtos if p.get('categoria') == 'chuva']
         if produtos_chuva:
             prod = random.choice(produtos_chuva)
             bot.send_photo(chat_id, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
             
-    elif call.data == 'cmd_dica':
+    elif texto == "💡 Dica da Estrada":
         dicas = carregar_json('dicas.json')
         if dicas:
             dica = random.choice(dicas)
             bot.send_message(chat_id, text=f"💡 **DICA DA ESTRADA** 💡\n\n{dica}", parse_mode='Markdown')
             
-    elif call.data == 'cmd_cidade_info':
-        aviso = "📍 **RADAR METEOROLÓGICO**\n\nPara ativar os alertas automáticos de chuva, escreve diretamente no chat:\n`/cidade Coimbra` (ou a tua localidade)."
-        bot.send_message(chat_id, text=aviso, parse_mode='Markdown')
+    elif texto == "⛈️ Configurar Alertas":
+        aviso = "📍 **RADAR METEOROLÓGICO**\n\nPara ativar os alertas automáticos de chuva, escreve apenas o nome da tua cidade (ex: *Coimbra* ou *Lousã*)."
+        bot.send_message(chat_id, text=aviso, parse_mode='Markdown', reply_markup=criar_teclado_inferior())
         
-    bot.answer_callback_query(call.id) # Retira o efeito de carregamento do botão
-
-# 6. COMANDO DE TEXTO PARA DEFINIR CIDADE
-@bot.message_handler(commands=['cidade'])
-def comando_cidade(message):
-    try:
-        cidade = message.text.split(' ', 1)[1].strip()
-        chat_id = str(message.chat.id)
+    elif texto == "☕ Pagar um Café":
+        msg = f"☕ **Gostaste das dicas ou poupaste dinheiro?**\nPodes dar uma força ao projeto pagando-me um café sem taxas pelo Revolut:\n👉 **[Pagar um Café pelo Revolut]({LINK_REVOLUT})**"
+        bot.send_message(chat_id, text=msg, parse_mode='Markdown', disable_web_page_preview=True, reply_markup=criar_teclado_inferior())
         
+    elif texto == "🧹 Limpar / Reiniciar":
+        chat_id_str = str(chat_id)
         utilizadores = carregar_json('utilizadores.json')
-        utilizadores[chat_id] = cidade
-        guardar_json('utilizadores.json', utilizadores)
-        
-        bot.send_message(message.chat.id, f"✅ **Radar Ativo!** Estás registado para receber avisos de temporal em: **{cidade.title()}** 🚀")
-    except IndexError:
-        bot.send_message(message.chat.id, "⚠️ Erro! Tens de indicar a cidade. Exemplo: `/cidade Coimbra`", parse_mode='Markdown')
+        if chat_id_str in utilizadores:
+            del utilizadores[chat_id_str]
+            guardar_json('utilizadores.json', utilizadores)
+        bot.send_message(chat_id, "🧹 **Memória limpa!** O teu registo de cidade foi apagado.", parse_mode='Markdown', reply_markup=criar_teclado_inferior())
 
-# 7. MOTOR DO RADAR (Background)
+# 7. GESTÃO DO TEXTO DA CIDADE (Para o Radar)
+@bot.message_handler(func=lambda message: message.chat.type == 'private')
+def capturar_cidade(message):
+    # Se o utilizador escrever o nome de uma cidade diretamente (sem ser botão)
+    cidade = message.text.strip()
+    chat_id = str(message.chat.id)
+    
+    utilizadores = carregar_json('utilizadores.json')
+    utilizadores[chat_id] = cidade
+    guardar_json('utilizadores.json', utilizadores)
+    
+    bot.send_message(message.chat.id, f"✅ **Radar Ativo!** Estás registado para receber avisos de temporal em: **{cidade.title()}** 🚀", reply_markup=criar_teclado_inferior())
+
+# 8. MOTOR DO RADAR (Background)
 def radar_meteorologico():
     print("🌤️ Radar Meteorológico ativado!")
     cidades_em_alerta = {} 
@@ -157,7 +176,7 @@ def radar_meteorologico():
             
         time.sleep(60 * 60)
 
-# 8. MENU AUTOMÁTICO DE INSTRUÇÕES NO CANAL (De 2 em 2 horas)
+# 9. MENU AUTOMÁTICO DE INSTRUÇÕES NO CANAL (De 2 em 2 horas)
 def auto_menu():
     print("📋 Auto-Menu ativado!")
     time.sleep(15) 
@@ -166,14 +185,14 @@ def auto_menu():
             msg = f"""
 🤖 **COMO USAR ESTE CANAL AO MÁXIMO** 🤖
 
-Sabias que tens um assistente pessoal na estrada? Clica em 👉 @{USERNAME_BOT} ou [neste link](https://t.me/{USERNAME_BOT}) para abrir o teu painel privado e interagir com botões automáticos para:
+Sabias que tens um assistente pessoal na estrada? Clica em 👉 @{USERNAME_BOT} ou [neste link](https://t.me/{USERNAME_BOT}) para abrir o teu painel privado. Lá tens botões interativos fixos no fundo para:
 
-⛈️ Ativar o Radar de Chuva na tua cidade
-🔥 Pedir Produtos e Promoções Exclusivas
+⛈️ Ativar o Radar de Chuva
+🔥 Ver Produtos e Promoções
 🌧️ Ver Equipamento de Proteção
 💡 Consultar Dicas de Entrega
 
-*Acede já ao chat privado e explora o centro de comando!* 🚀
+*Acede já ao chat privado e explora o centro de comando com um clique!* 🚀
 """
             bot.send_message(CANAL_ID, text=msg, parse_mode='Markdown', disable_web_page_preview=True)
         except Exception as e:
@@ -181,7 +200,7 @@ Sabias que tens um assistente pessoal na estrada? Clica em 👉 @{USERNAME_BOT} 
             
         time.sleep(2 * 60 * 60) 
 
-# 9. CICLO DE VENDAS DO CANAL (Background)
+# 10. CICLO DE VENDAS DO CANAL (Background)
 def auto_poster():
     print("🤖 Auto-Poster ativado!")
     time.sleep(10)
@@ -195,7 +214,7 @@ def auto_poster():
                 dica = random.choice(dicas)
                 bot.send_message(CANAL_ID, f"💡 **DICA DA HORA DE ALMOÇO** 💡\n\n{dica}", parse_mode='Markdown')
             elif 20 <= hora_atual <= 23:
-                premium = [p for p in produtos if p.get('premium'] == True]
+                premium = [p for p in produtos if p.get('premium') == True]
                 if premium:
                     prod = random.choice(premium)
                     bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
@@ -206,14 +225,14 @@ def auto_poster():
         except Exception as e:
             print(f"⚠️ Erro detalhado no Auto-Poster: {e}")
             
-        time.sleep(3 * 60)
+        time.sleep(30 * 60)
 
-# 10. INICIAR TODAS AS TAREFAS
+# 11. INICIAR TODAS AS TAREFAS
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
     threading.Thread(target=auto_poster, daemon=True).start()
     threading.Thread(target=radar_meteorologico, daemon=True).start()
     threading.Thread(target=auto_menu, daemon=True).start() 
     
-    print("🎧 Bot online e à escuta com Painel Premium...")
+    print("🎧 Bot online com Teclado Persistente e Menu de Botões...")
     bot.infinity_polling(skip_pending=True)
