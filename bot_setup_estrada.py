@@ -13,11 +13,7 @@ import threading
 app = Flask('')
 @app.route('/')
 def home():
-    return "🤖 EstafetaBot: Painel Inline, Radar & Execução Global a funcionar!"
-
-def run_flask():
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=port)
+    return "🤖 EstafetaBot: Painel Inline, Radar & Flask Principal a funcionar!"
 
 # 2. CREDENCIAIS
 TOKEN = '8950805985:AAFOKAmSvCoNVeF_UUgvLXOnq8KhFsvD7us'
@@ -313,7 +309,7 @@ def auto_poster():
             
         time.sleep(3 * 60)
 
-# 11. INICIAR TUDO GLOBALMENTE (Garante que arranca mesmo com Gunicorn/Web Service no Render)
+# 11. INICIALIZAÇÃO DE TAREFAS E FLASK PRINCIPAL
 def run_bot():
     try:
         bot.remove_webhook()
@@ -326,13 +322,15 @@ def run_bot():
             print(f"⚠️ Erro no bot: {e}")
             time.sleep(5)
 
-# Arranca o Flask numa thread
-threading.Thread(target=run_flask, daemon=True).start()
-# Arranca o Bot do Telegram numa thread
-threading.Thread(target=run_bot, daemon=True).start()
-# Arranca as tarefas automáticas em background
-threading.Thread(target=auto_poster, daemon=True).start()
-threading.Thread(target=radar_meteorologico, daemon=True).start()
-threading.Thread(target=auto_menu, daemon=True).start()
+if __name__ == "__main__":
+    # Arranca o bot, o radar e as tarefas em segundo plano via threads
+    threading.Thread(target=run_bot, daemon=True).start()
+    threading.Thread(target=auto_poster, daemon=True).start()
+    threading.Thread(target=radar_meteorologico, daemon=True).start()
+    threading.Thread(target=auto_menu, daemon=True).start()
 
-print("🎧 EstafetaBot totalmente online e operacional via execução global!")
+    print("🎧 EstafetaBot e tarefas automáticas a correr em background...")
+
+    # Flask corre na thread principal (bloqueante), mantendo o Render sempre ativo
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
