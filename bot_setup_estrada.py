@@ -13,7 +13,7 @@ import threading
 app = Flask('')
 @app.route('/')
 def home():
-    return "🤖 EstafetaBot: Painel Inline, Radar & Correção de Timers a funcionar!"
+    return "🤖 EstafetaBot: Painel Inline, Radar & Gestão Única de Timers a funcionar!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
@@ -28,6 +28,7 @@ USERNAME_BOT = 'oEstafeta_bot'
 bot = telebot.TeleBot(TOKEN)
 
 aguardando_cidade = set()
+active_timers = {} # Dicionário para controlar e cancelar timers duplicados
 
 # 3. GESTÃO DE DADOS (JSON)
 def carregar_json(ficheiro):
@@ -46,6 +47,10 @@ def formatar_promo(promo):
 
 # Função para reenviar o painel de botões inline
 def enviar_menu_reutilizavel(chat_id):
+    # Remove o timer ativo para este chat se já disparou
+    if chat_id in active_timers:
+        del active_timers[chat_id]
+        
     markup = types.InlineKeyboardMarkup(row_width=2)
     btn_promo = types.InlineKeyboardButton("🔥 Ver Promoção", callback_data='cmd_promo')
     btn_chuva = types.InlineKeyboardButton("🌧️ Equipamento Chuva", callback_data='cmd_chuva')
@@ -61,6 +66,18 @@ def enviar_menu_reutilizavel(chat_id):
         bot.send_message(chat_id, text=msg, parse_mode='Markdown', reply_markup=markup)
     except Exception:
         pass
+
+# Função inteligente para gerir o temporizador único (cancela o anterior se existir)
+def agendar_reaparecimento_menu(chat_id):
+    if chat_id in active_timers:
+        try:
+            active_timers[chat_id].cancel()
+        except Exception:
+            pass
+            
+    t = threading.Timer(10.0, enviar_menu_reutilizavel, args=[chat_id])
+    active_timers[chat_id] = t
+    t.start()
 
 # 4. PAINEL COM BOTÕES DIRETAMENTE NO CHAT (/start ou /menu)
 @bot.message_handler(commands=['start', 'menu'])
@@ -112,7 +129,7 @@ def callback_handler(call):
     
     # Só agenda o reaparecimento do menu se NÃO for para configurar a cidade
     if call.data != 'cmd_cidade_info':
-        threading.Timer(10.0, enviar_menu_reutilizavel, args=[chat_id]).start()
+        agendar_reaparecimento_menu(chat_id)
 
 # 6. COMANDO /clear POR TEXTO
 @bot.message_handler(commands=['clear'])
@@ -179,7 +196,13 @@ def capturar_texto_livre(message):
 • Vento: **{vento} km/h**
 """
             bot.send_message(chat_id, resposta, parse_mode='Markdown')
-            threading.Timer(3.0, enviar_menu_reutilizavel, args=[chat_id]).start()
+            
+            # Agenda o reaparecimento do menu após configurar a cidade com segurança
+            if chat_id in active_timers:
+                active_timers[chat_id].cancel()
+            t = threading.Timer(3.0, enviar_menu_reutilizavel, args=[chat_id])
+            active_timers[chat_id] = t
+            t.start()
         else:
             bot.send_message(chat_id, "⚠️ Não encontrei essa cidade. Tenta escrever novamente (ex: *Coimbra* ou *Lousã*).", parse_mode='Markdown')
     except Exception as e:
@@ -274,7 +297,7 @@ def auto_poster():
                 dica = random.choice(dicas)
                 bot.send_message(CANAL_ID, f"💡 **DICA DA HORA DE ALMOÇO** 💡\n\n{dica}", parse_mode='Markdown')
             elif 20 <= hora_atual <= 23:
-                premium = [p for p in produtos if p.get('premium') == True]
+                premium = [p for p in produtos if p.get('premium'] == True]
                 if premium:
                     prod = random.choice(premium)
                     bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
@@ -294,5 +317,5 @@ if __name__ == "__main__":
     threading.Thread(target=radar_meteorologico, daemon=True).start()
     threading.Thread(target=auto_menu, daemon=True).start() 
     
-    print("🎧 EstafetaBot online com temporizadores corrigidos...")
+    print("🎧 EstafetaBot online com controlo de temporizadores únicos...")
     bot.infinity_polling(skip_pending=True)
