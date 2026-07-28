@@ -13,17 +13,17 @@ import threading
 app = Flask('')
 @app.route('/')
 def home():
-    return "🤖 EstafetaBot: Painel Inline, Radar & Tempo Real a funcionar!"
+    return "🤖 EstafetaBot: Painel Inline, Radar & Reaparecimento Automático a funcionar!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# 2. CREDENCIAIS (Token fixo e novo username)
+# 2. CREDENCIAIS (Token fixo e username atualizado)
 TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVsw'
 CANAL_ID = '@setupdaestrada'
 LINK_REVOLUT = 'https://revolut.me/guilhevb38'
-USERNAME_BOT = 'EstafetaBot' 
+USERNAME_BOT = 'Setup_da_Estrada_Bot' 
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -42,12 +42,8 @@ def guardar_json(ficheiro, dados):
 def formatar_promo(promo):
     return f"🔥 **OPORTUNIDADE** 🔥\n📦 **Produto:** {promo['nome']}\n\n❌ **Preço Habitual:** ~{promo['preco_antigo']}~\n✅ **Preço de Desconto:** {promo['preco_novo']}\n\n👉 **[Ver na Amazon com Desconto]({promo['link']})**"
 
-# 4. PAINEL COM BOTÕES DIRETAMENTE NO CHAT
-@bot.message_handler(commands=['start', 'menu'])
-def painel_privado(message):
-    if message.chat.type != 'private':
-        return 
-        
+# Função para reenviar o painel de botões inline
+def enviar_menu_reutilizavel(chat_id):
     markup = types.InlineKeyboardMarkup(row_width=2)
     btn_promo = types.InlineKeyboardButton("🔥 Ver Promoção", callback_data='cmd_promo')
     btn_chuva = types.InlineKeyboardButton("🌧️ Equipamento Chuva", callback_data='cmd_chuva')
@@ -58,14 +54,20 @@ def painel_privado(message):
     
     markup.add(btn_promo, btn_chuva, btn_dica, btn_alertas, btn_cafe, btn_clear)
     
-    msg = f"""
-⚡ **CENTRO DE COMANDO - ESTAFETABOT** ⚡
+    msg = "⚡ **CENTRO DE COMANDO - ESTAFETABOT** ⚡\n\nO que queres fazer a seguir?"
+    try:
+        bot.send_message(chat_id, text=msg, parse_mode='Markdown', reply_markup=markup)
+    except Exception:
+        pass
 
-Olá, estafeta! Clica nos botões abaixo para interagir diretamente com o sistema:
-    """
-    bot.send_message(message.chat.id, text=msg, parse_mode='Markdown', reply_markup=markup)
+# 4. PAINEL COM BOTÕES DIRETAMENTE NO CHAT (/start ou /menu)
+@bot.message_handler(commands=['start', 'menu'])
+def painel_privado(message):
+    if message.chat.type != 'private':
+        return 
+    enviar_menu_reutilizavel(message.chat.id)
 
-# 5. GESTÃO DOS CLIQUES DOS BOTÕES NO CHAT
+# 5. GESTÃO DOS CLIQUES DOS BOTÕES NO CHAT (Com temporizador de 10s)
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     chat_id = call.message.chat.id
@@ -102,6 +104,9 @@ def callback_handler(call):
         bot.send_message(chat_id, "🧹 **Memória limpa!** O teu registo de cidade foi apagado.", parse_mode='Markdown')
         
     bot.answer_callback_query(call.id)
+    
+    # ⏱️ Passados 10 segundos, os botões reaparecem automaticamente em baixo
+    threading.Timer(10.0, enviar_menu_reutilizavel, args=[chat_id]).start()
 
 # 6. COMANDO /clear POR TEXTO
 @bot.message_handler(commands=['clear'])
@@ -114,6 +119,7 @@ def comando_clear_texto(message):
         del utilizadores[chat_id]
         guardar_json('utilizadores.json', utilizadores)
     bot.send_message(message.chat.id, "🧹 **Memória limpa!** O teu registo de cidade foi apagado.", parse_mode='Markdown')
+    enviar_menu_reutilizavel(chat_id)
 
 # 7. GESTÃO DA CIDADE COM RESPOSTA IMEDIATA E DETALHADA
 @bot.message_handler(func=lambda message: message.chat.type == 'private' and not message.text.startswith('/'))
@@ -122,7 +128,6 @@ def capturar_cidade(message):
     chat_id = str(message.chat.id)
     
     try:
-        # Consulta geocoding para validar e obter coordenadas
         geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={cidade}&count=1&language=pt&format=json"
         geo_req = requests.get(geo_url).json()
         
@@ -132,7 +137,6 @@ def capturar_cidade(message):
             nome_real = geo_req['results'][0]['name']
             pais = geo_req['results'][0].get('country', 'Portugal')
             
-            # Consulta o estado do tempo atual
             meteo_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,wind_speed_10m"
             meteo_req = requests.get(meteo_url).json()
             
@@ -140,7 +144,6 @@ def capturar_cidade(message):
             chuva = meteo_req['current']['precipitation']
             vento = meteo_req['current']['wind_speed_10m']
             
-            # Guarda na base de dados
             utilizadores = carregar_json('utilizadores.json')
             utilizadores[chat_id] = nome_real
             guardar_json('utilizadores.json', utilizadores)
@@ -155,10 +158,11 @@ def capturar_cidade(message):
 • Temperatura: **{temp}°C**
 • Precipitação: **{chuva} mm**
 • Vento: **{vento} km/h**
-
-Podes continuar a usar os botões do menu sempre que precisares!
 """
             bot.send_message(message.chat.id, resposta, parse_mode='Markdown')
+            
+            # Reenvia o menu após 3 segundos para facilitar novas interações após configurar a cidade
+            threading.Timer(3.0, enviar_menu_reutilizavel, args=[chat_id]).start()
         else:
             bot.send_message(message.chat.id, "⚠️ Não encontrei essa cidade. Tenta escrever novamente (ex: *Coimbra* ou *Lousã*).", parse_mode='Markdown')
     except Exception as e:
@@ -250,7 +254,7 @@ def auto_poster():
                 dica = random.choice(dicas)
                 bot.send_message(CANAL_ID, f"💡 **DICA DA HORA DE ALMOÇO** 💡\n\n{dica}", parse_mode='Markdown')
             elif 20 <= hora_atual <= 23:
-                premium = [p for p in produtos if p.get('premium') == True]
+                premium = [p for p in produtos if p.get('premium'] == True]
                 if premium:
                     prod = random.choice(premium)
                     bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
@@ -270,5 +274,5 @@ if __name__ == "__main__":
     threading.Thread(target=radar_meteorologico, daemon=True).start()
     threading.Thread(target=auto_menu, daemon=True).start() 
     
-    print("🎧 Bot online com EstafetaBot e Tempo Real configurado...")
+    print("🎧 Bot online com Temporizador Automático de 10s...")
     bot.infinity_polling(skip_pending=True)
