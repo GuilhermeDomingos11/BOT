@@ -283,12 +283,21 @@ Lá encontras botões interativos para:
 # 10. CICLO DE VENDAS DO CANAL (Background)
 def auto_poster():
     print("🤖 Auto-Poster ativado!")
-    time.sleep(10)
+    time.sleep(5)
+    
+    # Mensagem de teste imediata para confirmar que o bot consegue publicar no canal
+    try:
+        bot.send_message(CANAL_ID, "🟢 **SISTEMA ONLINE:** O EstafetaBot já está a monitorizar a estrada e as promoções!", parse_mode='Markdown')
+    except Exception as e:
+        print(f"⚠️ Erro ao enviar mensagem inicial para o canal: {e}")
+
     while True:
         try:
             hora_atual = datetime.now().hour
             produtos = carregar_json('produtos.json')
             dicas = carregar_json('dicas.json')
+            
+            print(produtos) # Vai mostrar no log do Render quantos produtos tens carregados
             
             if 12 <= hora_atual <= 14 and dicas:
                 dica = random.choice(dicas)
@@ -311,7 +320,23 @@ def auto_poster():
         except Exception as e:
             print(f"⚠️ Erro detalhado no Auto-Poster: {e}")
             
-        time.sleep(3 * 60)
+        time.sleep(3 * 60) # Intervalo de 30 minutos entre promoções
+
+# 11. INICIAR TODAS AS TAREFAS
+if __name__ == "__main__":
+    threading.Thread(target=run_flask, daemon=True).start()
+    threading.Thread(target=auto_poster, daemon=True).start()
+    threading.Thread(target=radar_meteorologico, daemon=True).start()
+    threading.Thread(target=auto_menu, daemon=True).start() 
+    
+    print("🎧 EstafetaBot online com teste de canal ativo...")
+    
+    while True:
+        try:
+            bot.infinity_polling(skip_pending=True, timeout=60, long_polling_timeout=60)
+        except Exception as e:
+            print(f"⚠️ Conflito detetado ({e}). A reiniciar a ligação em 5 segundos...")
+            time.sleep(5)
 
 # 11. INICIAR TODAS AS TAREFAS (Com proteção anti-conflito no polling)
 if __name__ == "__main__":
