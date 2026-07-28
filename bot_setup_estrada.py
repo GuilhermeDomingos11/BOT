@@ -329,7 +329,13 @@ if __name__ == "__main__":
     threading.Thread(target=radar_meteorologico, daemon=True).start()
     threading.Thread(target=auto_menu, daemon=True).start() 
     
-    print("🎧 EstafetaBot online com teste de canal ativo...")
+    print("🎧 EstafetaBot online com limpeza de webhook...")
+    
+    # Força a remoção de qualquer webhook preso para o polling funcionar sem conflito 409
+    try:
+        bot.remove_webhook()
+    except Exception:
+        pass
     
     while True:
         try:
@@ -337,5 +343,4 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"⚠️ Conflito detetado ({e}). A reiniciar a ligação em 5 segundos...")
             time.sleep(5)
-
 
