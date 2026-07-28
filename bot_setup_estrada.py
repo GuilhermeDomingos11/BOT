@@ -13,17 +13,17 @@ import threading
 app = Flask('')
 @app.route('/')
 def home():
-    return "🤖 Setup da Estrada: Botões Inline & Radar a funcionar!"
+    return "🤖 EstafetaBot: Painel Inline, Radar & Tempo Real a funcionar!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# 2. CREDENCIAIS (Token fixo guardado)
+# 2. CREDENCIAIS (Token fixo e novo username)
 TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVsw'
 CANAL_ID = '@setupdaestrada'
 LINK_REVOLUT = 'https://revolut.me/guilhevb38'
-USERNAME_BOT = 'Setup_da_Estrada_Bot' # Corrigido com sublinhados obrigatórios
+USERNAME_BOT = 'EstafetaBot' 
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -42,7 +42,7 @@ def guardar_json(ficheiro, dados):
 def formatar_promo(promo):
     return f"🔥 **OPORTUNIDADE** 🔥\n📦 **Produto:** {promo['nome']}\n\n❌ **Preço Habitual:** ~{promo['preco_antigo']}~\n✅ **Preço de Desconto:** {promo['preco_novo']}\n\n👉 **[Ver na Amazon com Desconto]({promo['link']})**"
 
-# 4. PAINEL COM BOTÕES DIRETAMENTE NO CHAT (Inline Keyboards)
+# 4. PAINEL COM BOTÕES DIRETAMENTE NO CHAT
 @bot.message_handler(commands=['start', 'menu'])
 def painel_privado(message):
     if message.chat.type != 'private':
@@ -59,7 +59,7 @@ def painel_privado(message):
     markup.add(btn_promo, btn_chuva, btn_dica, btn_alertas, btn_cafe, btn_clear)
     
     msg = f"""
-⚡ **CENTRO DE COMANDO - SETUP DA ESTRADA** ⚡
+⚡ **CENTRO DE COMANDO - ESTAFETABOT** ⚡
 
 Olá, estafeta! Clica nos botões abaixo para interagir diretamente com o sistema:
     """
@@ -90,7 +90,7 @@ def callback_handler(call):
             bot.send_message(chat_id, text=f"💡 **DICA DA ESTRADA** 💡\n\n{dica}", parse_mode='Markdown')
             
     elif call.data == 'cmd_cidade_info':
-        aviso = "📍 **RADAR METEOROLÓGICO**\n\nPara ativar os alertas automáticos de chuva, escreve apenas o nome da tua cidade (ex: *Coimbra* ou *Lousã*)."
+        aviso = "📍 **RADAR METEOROLÓGICO**\n\nPara ativar os alertas automáticos, escreve apenas o nome da tua cidade (ex: *Coimbra* ou *Lousã*)."
         bot.send_message(chat_id, text=aviso, parse_mode='Markdown')
         
     elif call.data == 'cmd_clear':
@@ -115,19 +115,56 @@ def comando_clear_texto(message):
         guardar_json('utilizadores.json', utilizadores)
     bot.send_message(message.chat.id, "🧹 **Memória limpa!** O teu registo de cidade foi apagado.", parse_mode='Markdown')
 
-# 7. GESTÃO DO TEXTO DA CIDADE (Para o Radar)
+# 7. GESTÃO DA CIDADE COM RESPOSTA IMEDIATA E DETALHADA
 @bot.message_handler(func=lambda message: message.chat.type == 'private' and not message.text.startswith('/'))
 def capturar_cidade(message):
     cidade = message.text.strip()
     chat_id = str(message.chat.id)
     
-    utilizadores = carregar_json('utilizadores.json')
-    utilizadores[chat_id] = cidade
-    guardar_json('utilizadores.json', utilizadores)
-    
-    bot.send_message(message.chat.id, f"✅ **Radar Ativo!** Estás registado para receber avisos de temporal em: **{cidade.title()}** 🚀")
+    try:
+        # Consulta geocoding para validar e obter coordenadas
+        geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={cidade}&count=1&language=pt&format=json"
+        geo_req = requests.get(geo_url).json()
+        
+        if 'results' in geo_req:
+            lat = geo_req['results'][0]['latitude']
+            lon = geo_req['results'][0]['longitude']
+            nome_real = geo_req['results'][0]['name']
+            pais = geo_req['results'][0].get('country', 'Portugal')
+            
+            # Consulta o estado do tempo atual
+            meteo_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,wind_speed_10m"
+            meteo_req = requests.get(meteo_url).json()
+            
+            temp = meteo_req['current']['temperature_2m']
+            chuva = meteo_req['current']['precipitation']
+            vento = meteo_req['current']['wind_speed_10m']
+            
+            # Guarda na base de dados
+            utilizadores = carregar_json('utilizadores.json')
+            utilizadores[chat_id] = nome_real
+            guardar_json('utilizadores.json', utilizadores)
+            
+            resposta = f"""
+✅ **RADAR ATIVADO COM SUCESSO!** 🚀
 
-# 8. MOTOR DO RADAR (Background)
+📍 **Localidade:** {nome_real} ({pais})
+⏰ **Frequência:** Vais receber avisos automáticos de **1 em 1 hora** caso o tempo mude bruscamente.
+
+🌡️ **Estado do Tempo Agora:**
+• Temperatura: **{temp}°C**
+• Precipitação: **{chuva} mm**
+• Vento: **{vento} km/h**
+
+Podes continuar a usar os botões do menu sempre que precisares!
+"""
+            bot.send_message(message.chat.id, resposta, parse_mode='Markdown')
+        else:
+            bot.send_message(message.chat.id, "⚠️ Não encontrei essa cidade. Tenta escrever novamente (ex: *Coimbra* ou *Lousã*).", parse_mode='Markdown')
+    except Exception as e:
+        bot.send_message(message.chat.id, "⚠️ Ocorreu um erro ao consultar o radar. Tenta novamente mais tarde.", parse_mode='Markdown')
+
+# 8. MOTOR DO RADAR (Background - verifica de 1 em 1 hora)
 def radar_meteorologico():
     print("🌤️ Radar Meteorológico ativado!")
     cidades_em_alerta = {} 
@@ -157,7 +194,7 @@ def radar_meteorologico():
                     estado_anterior = cidades_em_alerta.get(cidade, False)
                     
                     if tempo_mau and not estado_anterior:
-                        alerta = f"⚠️ **ALERTA DE TEMPORAL: {nome_real.upper()}** ⚠️\n\n🌧️ O radar detetou mudança no tempo agora mesmo! Prepara o impermeável e cuidado nas estradas."
+                        alerta = f"⚠️ **ALERTA DE TEMPORAL: {nome_real.upper()}** ⚠️\n\n🌧️ O radar detetou chuva ou vento forte! Prepara o equipamento impermeável e cuida-te na estrada."
                         for u_chat_id, u_cidade in utilizadores.items():
                             if u_cidade.lower() == cidade:
                                 try:
@@ -174,20 +211,19 @@ def radar_meteorologico():
             
         time.sleep(60 * 60)
 
-# 9. MENU AUTOMÁTICO DE INSTRUÇÕES NO CANAL (De 2 em 2 horas)
+# 9. MENU AUTOMÁTICO DE INSTRUÇÕES NO CANAL
 def auto_menu():
     print("📋 Auto-Menu ativado!")
     time.sleep(15) 
     while True:
         try:
-            # Garante que usa a variável USERNAME_BOT corretamente com sublinhados
             msg = f"""
 🤖 **COMO USAR ESTE CANAL AO MÁXIMO** 🤖
 
 Sabias que tens um assistente pessoal na estrada? Clica em 👉 @{USERNAME_BOT} ou [neste link](https://t.me/{USERNAME_BOT}) para abrir o teu painel privado. 
 
-Lá encontras botões interativos diretos no chat para:
-⛈️ Ativar o Radar de Chuva
+Lá encontras botões interativos para:
+⛈️ Ativar o Radar de Chuva (com atualizações horárias)
 🔥 Ver Produtos e Promoções
 🌧️ Ver Equipamento de Proteção
 💡 Consultar Dicas de Entrega
@@ -225,7 +261,7 @@ def auto_poster():
         except Exception as e:
             print(f"⚠️ Erro detalhado no Auto-Poster: {e}")
             
-        time.sleep(4 * 60)
+        time.sleep(3 * 60)
 
 # 11. INICIAR TODAS AS TAREFAS
 if __name__ == "__main__":
@@ -234,5 +270,5 @@ if __name__ == "__main__":
     threading.Thread(target=radar_meteorologico, daemon=True).start()
     threading.Thread(target=auto_menu, daemon=True).start() 
     
-    print("🎧 Bot online com Botões Inline no Chat e Link Corrigido...")
+    print("🎧 Bot online com EstafetaBot e Tempo Real configurado...")
     bot.infinity_polling(skip_pending=True)
