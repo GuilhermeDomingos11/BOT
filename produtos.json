@@ -1,0 +1,47 @@
+[
+    {
+        "nome": "Powerbank 20000mAh de Alta Capacidade para Turnos Longos",
+        "preco_antigo": "49.99€",
+        "preco_novo": "34.99€",
+        "link": "https://www.amazon.es/s?k=powerbank+20000mah+carga+rapida&tag=setupdaestrad-21",
+        "imagem": "https://images.unsplash.com/photo-1609091839311-d5365f9ff1c5?q=80&w=800&auto=format&fit=crop",
+        "categoria": "eletronica",
+        "premium": false
+    },
+    {
+        "nome": "Suporte de Telemóvel para Mota com Amortecedor de Vibração",
+        "preco_antigo": "59.90€",
+        "preco_novo": "45.00€",
+        "link": "https://www.amazon.es/s?k=suporte+telemovel+mota+antivibracao&tag=setupdaestrad-21",
+        "imagem": "https://images.unsplash.com/photo-1558981806-ec527fa84c39?q=80&w=800&auto=format&fit=crop",
+        "categoria": "seguranca",
+        "premium": false
+    },
+    {
+        "nome": "Luvas Térmicas e Impermeáveis para Inverno e Chuva",
+        "preco_antigo": "45.00€",
+        "preco_novo": "29.99€",
+        "link": "https://www.amazon.es/s?k=luvas+impermeaveis+mota+inverno&tag=setupdaestrad-21",
+        "imagem": "https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?q=80&w=800&auto=format&fit=crop",
+        "categoria": "chuva",
+        "premium": false
+    },
+    {
+        "nome": "Capa de Chuva Completa Impermeável para Motociclistas",
+        "preco_antigo": "40.00€",
+        "preco_novo": "26.99€",
+        "link": "https://www.amazon.es/s?k=capa+chuva+completa+mota&tag=setupdaestrad-21",
+        "imagem": "https://images.unsplash.com/photo-1558981285-6f0c94958bb6?q=80&w=800&auto=format&fit=crop",
+        "categoria": "chuva",
+        "premium": false
+    },
+    {
+        "nome": "Intercomunicador Bluetooth Premium (Pack Duplo)",
+        "preco_antigo": "129.99€",
+        "preco_novo": "89.99€",
+        "link": "https://www.amazon.es/s?k=intercomunicador+capacete+mota&tag=setupdaestrad-21",
+        "imagem": "https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=800&auto=format&fit=crop",
+        "categoria": "eletronica",
+        "premium": true
+    }
+]
