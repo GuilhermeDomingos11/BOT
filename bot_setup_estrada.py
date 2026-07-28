@@ -132,7 +132,7 @@ def loop_bot():
             print(f"⚠️ Erro no ciclo: {e}")
             
         # Intervalo de 30 minutos entre publicações
-        time.sleep(30 * 60)
+        time.sleep(15 * 60)
 
 if __name__ == "__main__":
     # Arranca o bot do Telegram numa thread separada
