@@ -84,7 +84,7 @@ lista_promocoes = [
 
 lista_dicas = [
     "📦 **Organização da Top Box:** Top boxes rígidas são excelentes para a segurança, mas os pedidos pequenos balançam muito. Leva sempre uma toalha limpa grossa ou plástico de bolhas para preencheres o espaço vazio. Evita molhos derramados em ruas de calçada!",
-    "⛈️ **Tração na Chuva:** A calçada portuguesa molhada e as grelhas de esgoto são os maiores inimigos nas subidas íngremes. Nestes dias, reduz a pressão dos pneus ligeiramente (cerca de 2 a 3 psi) para ganhares mais superfície de contacto e aderência.",
+    "⛈️ **Tração na Chuva:** A calçada molhada e as grelhas de esgoto são os maiores inimigos nas subidas íngremes. Nestes dias, reduz a pressão dos pneus ligeiramente (cerca de 2 a 3 psi) para ganhares mais superfície de contacto e aderência.",
     "🔋 **Frio e Baterias:** Nos turnos de inverno, o frio drena a bateria do telemóvel até 30% mais rápido. Mantém a tua powerbank perto do corpo (dentro do casaco) e passa apenas o cabo para fora, o calor corporal ajuda a manter a eficiência da bateria.",
     "🏍️ **Corrente Saudável:** Apanhaste uma bátega de água a meio do turno? Assim que chegares a casa, passa um spray lubrificante na corrente enquanto ela ainda está quente. Evita ferrugem e poupa-te muitos euros na oficina a longo prazo.",
     "🚦 **Olhos na Estrada:** Em cruzamentos cegos ou entroncamentos apertados, não olhes só para os carros, olha para os reflexos nas montras das lojas. Muitas vezes consegues ver se vem lá um carro antes sequer de ele chegar à esquina.",
