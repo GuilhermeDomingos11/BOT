@@ -13,14 +13,14 @@ import threading
 app = Flask('')
 @app.route('/')
 def home():
-    return "🤖 EstafetaBot: Painel Inline, Radar & Webhook Limpo a funcionar!"
+    return "🤖 EstafetaBot: Painel Inline, Radar & Execução Global a funcionar!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
 # 2. CREDENCIAIS
-TOKEN = '8950805985:AAF0i9-pXNWt47xYFYQaWFAzZMSepQ9G9pc'
+TOKEN = '8950805985:AAFOKAmSvCoNVeF_UUgvLXOnq8KhFsvD7us'
 CANAL_ID = '@setupdaestrada'
 LINK_REVOLUT = 'https://revolut.me/guilhevb38'
 USERNAME_BOT = 'oEstafeta_bot' 
@@ -98,7 +98,7 @@ def callback_handler(call):
             
     elif call.data == 'cmd_chuva':
         produtos = carregar_json('produtos.json')
-        produtos_chuva = [p for p in produtos if p.get('categoria') == 'chuva']
+        produtos_chuva = [p for p in produtos if p.get('categoria'] == 'chuva']
         if produtos_chuva:
             prod = random.choice(produtos_chuva)
             bot.send_photo(chat_id, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
@@ -313,24 +313,26 @@ def auto_poster():
             
         time.sleep(3 * 60)
 
-# 11. INICIAR TODAS AS TAREFAS (Com limpeza de webhook e anti-conflito)
-if __name__ == "__main__":
-    threading.Thread(target=run_flask, daemon=True).start()
-    threading.Thread(target=auto_poster, daemon=True).start()
-    threading.Thread(target=radar_meteorologico, daemon=True).start()
-    threading.Thread(target=auto_menu, daemon=True).start() 
-    
-    print("🎧 EstafetaBot online com limpeza de webhook...")
-    
-    # Remove qualquer webhook ativo para o polling funcionar sem erro 409
+# 11. INICIAR TUDO GLOBALMENTE (Garante que arranca mesmo com Gunicorn/Web Service no Render)
+def run_bot():
     try:
         bot.remove_webhook()
     except Exception:
         pass
-    
     while True:
         try:
             bot.infinity_polling(skip_pending=True, timeout=60, long_polling_timeout=60)
         except Exception as e:
-            print(f"⚠️ Conflito detetado ({e}). A reiniciar a ligação em 5 segundos...")
+            print(f"⚠️ Erro no bot: {e}")
             time.sleep(5)
+
+# Arranca o Flask numa thread
+threading.Thread(target=run_flask, daemon=True).start()
+# Arranca o Bot do Telegram numa thread
+threading.Thread(target=run_bot, daemon=True).start()
+# Arranca as tarefas automáticas em background
+threading.Thread(target=auto_poster, daemon=True).start()
+threading.Thread(target=radar_meteorologico, daemon=True).start()
+threading.Thread(target=auto_menu, daemon=True).start()
+
+print("🎧 EstafetaBot totalmente online e operacional via execução global!")
