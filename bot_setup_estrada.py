@@ -13,7 +13,7 @@ import threading
 app = Flask('')
 @app.route('/')
 def home():
-    return "🤖 EstafetaBot: Painel Inline, Radar & Auto-Poster Corrigido a funcionar!"
+    return "🤖 EstafetaBot: Painel Inline, Radar & Proteção Anti-Conflito a funcionar!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
@@ -66,7 +66,7 @@ def enviar_menu_reutilizavel(chat_id):
     except Exception:
         pass
 
-# Função inteligente para gerir o temporizador único (cancela o anterior e evita duplicações)
+# Função inteligente para gerir o temporizador único
 def agendar_reaparecimento_menu(chat_id):
     if chat_id in active_timers:
         try:
@@ -126,7 +126,6 @@ def callback_handler(call):
         
     bot.answer_callback_query(call.id)
     
-    # Só agenda o reaparecimento do menu se NÃO for para configurar a cidade
     if call.data != 'cmd_cidade_info':
         agendar_reaparecimento_menu(chat_id)
 
@@ -281,7 +280,7 @@ Lá encontras botões interativos para:
             
         time.sleep(2 * 60 * 60) 
 
-# 10. CICLO DE VENDAS DO CANAL (Background) - Atualizado com fallback seguro
+# 10. CICLO DE VENDAS DO CANAL (Background)
 def auto_poster():
     print("🤖 Auto-Poster ativado!")
     time.sleep(10)
@@ -314,12 +313,18 @@ def auto_poster():
             
         time.sleep(3 * 60)
 
-# 11. INICIAR TODAS AS TAREFAS
+# 11. INICIAR TODAS AS TAREFAS (Com proteção anti-conflito no polling)
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
     threading.Thread(target=auto_poster, daemon=True).start()
     threading.Thread(target=radar_meteorologico, daemon=True).start()
     threading.Thread(target=auto_menu, daemon=True).start() 
     
-    print("🎧 EstafetaBot online com todas as correções aplicadas...")
-    bot.infinity_polling(skip_pending=True)
+    print("🎧 EstafetaBot online com proteção anti-conflito...")
+    
+    while True:
+        try:
+            bot.infinity_polling(skip_pending=True, timeout=60, long_polling_timeout=60)
+        except Exception as e:
+            print(f"⚠️ Conflito detetado ({e}). A reiniciar a ligação em 5 segundos...")
+            time.sleep(5)
