@@ -225,7 +225,7 @@ def auto_poster():
         except Exception as e:
             print(f"⚠️ Erro detalhado no Auto-Poster: {e}")
             
-        time.sleep(30 * 60)
+        time.sleep(3 * 60)
 
 # 11. INICIAR TODAS AS TAREFAS
 if __name__ == "__main__":
