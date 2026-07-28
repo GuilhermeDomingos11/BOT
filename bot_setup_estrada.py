@@ -23,7 +23,7 @@ def run_flask():
 # -------------------------------------------------------------
 TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVsw'
 CANAL_ID = '@setupdaestrada'
-TAG_AFILIADO = 'setupdaestrada-21'
+TAG_AFILIADO = 'setupdaestrad-21'
 
 bot = telebot.TeleBot(TOKEN)
 
