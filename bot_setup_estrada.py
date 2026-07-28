@@ -338,18 +338,4 @@ if __name__ == "__main__":
             print(f"⚠️ Conflito detetado ({e}). A reiniciar a ligação em 5 segundos...")
             time.sleep(5)
 
-# 11. INICIAR TODAS AS TAREFAS (Com proteção anti-conflito no polling)
-if __name__ == "__main__":
-    threading.Thread(target=run_flask, daemon=True).start()
-    threading.Thread(target=auto_poster, daemon=True).start()
-    threading.Thread(target=radar_meteorologico, daemon=True).start()
-    threading.Thread(target=auto_menu, daemon=True).start() 
-    
-    print("🎧 EstafetaBot online com proteção anti-conflito...")
-    
-    while True:
-        try:
-            bot.infinity_polling(skip_pending=True, timeout=60, long_polling_timeout=60)
-        except Exception as e:
-            print(f"⚠️ Conflito detetado ({e}). A reiniciar a ligação em 5 segundos...")
-            time.sleep(5)
+
