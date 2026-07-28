@@ -13,7 +13,7 @@ import threading
 app = Flask('')
 @app.route('/')
 def home():
-    return "🤖 EstafetaBot: Painel Inline, Radar & Gestão Única de Timers a funcionar!"
+    return "🤖 EstafetaBot: Painel Inline, Radar & Auto-Poster Corrigido a funcionar!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
@@ -281,7 +281,7 @@ Lá encontras botões interativos para:
             
         time.sleep(2 * 60 * 60) 
 
-# 10. CICLO DE VENDAS DO CANAL (Background)
+# 10. CICLO DE VENDAS DO CANAL (Background) - Atualizado com fallback seguro
 def auto_poster():
     print("🤖 Auto-Poster ativado!")
     time.sleep(10)
@@ -298,6 +298,12 @@ def auto_poster():
                 premium = [p for p in produtos if p.get('premium') == True]
                 if premium:
                     prod = random.choice(premium)
+                elif produtos:
+                    prod = random.choice(produtos)
+                else:
+                    prod = None
+                
+                if prod:
                     bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
             else:
                 if produtos:
@@ -315,5 +321,5 @@ if __name__ == "__main__":
     threading.Thread(target=radar_meteorologico, daemon=True).start()
     threading.Thread(target=auto_menu, daemon=True).start() 
     
-    print("🎧 EstafetaBot online com sintaxe corrigida e timers unificados...")
+    print("🎧 EstafetaBot online com todas as correções aplicadas...")
     bot.infinity_polling(skip_pending=True)
