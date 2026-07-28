@@ -19,11 +19,11 @@ def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# 2. CREDENCIAIS
+# 2. CREDENCIAIS (Token fixo guardado)
 TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVsw'
 CANAL_ID = '@setupdaestrada'
 LINK_REVOLUT = 'https://revolut.me/guilhevb38'
-USERNAME_BOT = 'Setup_da_Estrada_Bot' # Username correto com sublinhados
+USERNAME_BOT = 'Setup_da_Estrada_Bot' 
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -68,7 +68,19 @@ Olá, estafeta! Este é o teu painel privado. Clica nos **botões em baixo** no 
     """
     bot.send_message(message.chat.id, text=msg, parse_mode='Markdown', reply_markup=criar_teclado_inferior())
 
-# 6. INTERAÇÃO POR BOTÕES FIXOS
+# 6. COMANDO /clear ESPECÍFICO
+@bot.message_handler(commands=['clear'])
+def comando_clear_texto(message):
+    if message.chat.type != 'private':
+        return
+    chat_id = str(message.chat.id)
+    utilizadores = carregar_json('utilizadores.json')
+    if chat_id in utilizadores:
+        del utilizadores[chat_id]
+        guardar_json('utilizadores.json', utilizadores)
+    bot.send_message(message.chat.id, "🧹 **Memória limpa!** O teu registo de cidade foi apagado.", parse_mode='Markdown', reply_markup=criar_teclado_inferior())
+
+# 7. INTERAÇÃO POR BOTÕES FIXOS
 @bot.message_handler(func=lambda message: message.text in [
     "🔥 Ver Promoção", 
     "🌧️ Equipamento Chuva", 
@@ -116,8 +128,8 @@ def lidar_botoes_fixos(message):
             guardar_json('utilizadores.json', utilizadores)
         bot.send_message(chat_id, "🧹 **Memória limpa!** O teu registo de cidade foi apagado.", parse_mode='Markdown', reply_markup=criar_teclado_inferior())
 
-# 7. GESTÃO DO TEXTO DA CIDADE (Para o Radar)
-@bot.message_handler(func=lambda message: message.chat.type == 'private')
+# 8. GESTÃO DO TEXTO DA CIDADE (Protegido para ignorar comandos com '/')
+@bot.message_handler(func=lambda message: message.chat.type == 'private' and not message.text.startswith('/'))
 def capturar_cidade(message):
     cidade = message.text.strip()
     chat_id = str(message.chat.id)
@@ -128,7 +140,7 @@ def capturar_cidade(message):
     
     bot.send_message(message.chat.id, f"✅ **Radar Ativo!** Estás registado para receber avisos de temporal em: **{cidade.title()}** 🚀", reply_markup=criar_teclado_inferior())
 
-# 8. MOTOR DO RADAR (Background)
+# 9. MOTOR DO RADAR (Background)
 def radar_meteorologico():
     print("🌤️ Radar Meteorológico ativado!")
     cidades_em_alerta = {} 
@@ -175,7 +187,7 @@ def radar_meteorologico():
             
         time.sleep(60 * 60)
 
-# 9. MENU AUTOMÁTICO DE INSTRUÇÕES NO CANAL (De 2 em 2 horas)
+# 10. MENU AUTOMÁTICO DE INSTRUÇÕES NO CANAL (De 2 em 2 horas)
 def auto_menu():
     print("📋 Auto-Menu ativado!")
     time.sleep(15) 
@@ -200,7 +212,7 @@ Lá em baixo tens botões interativos fixos no ecrã para:
             
         time.sleep(2 * 60 * 60) 
 
-# 10. CICLO DE VENDAS DO CANAL (Background)
+# 11. CICLO DE VENDAS DO CANAL (Background)
 def auto_poster():
     print("🤖 Auto-Poster ativado!")
     time.sleep(10)
@@ -214,7 +226,7 @@ def auto_poster():
                 dica = random.choice(dicas)
                 bot.send_message(CANAL_ID, f"💡 **DICA DA HORA DE ALMOÇO** 💡\n\n{dica}", parse_mode='Markdown')
             elif 20 <= hora_atual <= 23:
-                premium = [p for p in produtos if p.get('premium'] == True]
+                premium = [p for p in produtos if p.get('premium') == True]
                 if premium:
                     prod = random.choice(premium)
                     bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
@@ -225,14 +237,14 @@ def auto_poster():
         except Exception as e:
             print(f"⚠️ Erro detalhado no Auto-Poster: {e}")
             
-        time.sleep(3 * 60)
+        time.sleep(30 * 60)
 
-# 11. INICIAR TODAS AS TAREFAS
+# 12. INICIAR TODAS AS TAREFAS
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
     threading.Thread(target=auto_poster, daemon=True).start()
     threading.Thread(target=radar_meteorologico, daemon=True).start()
     threading.Thread(target=auto_menu, daemon=True).start() 
     
-    print("🎧 Bot online com Teclado Persistente e Menu corrigido...")
+    print("🎧 Bot online com Token fixo e Teclado Persistente...")
     bot.infinity_polling(skip_pending=True)
