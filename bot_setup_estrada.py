@@ -43,10 +43,10 @@ def formatar_promo(promo):
     return f"🔥 **OPORTUNIDADE** 🔥\n📦 **Produto:** {promo['nome']}\n\n❌ **Preço Habitual:** ~{promo['preco_antigo']}~\n✅ **Preço de Desconto:** {promo['preco_novo']}\n\n👉 **[Ver na Amazon com Desconto]({promo['link']})**"
 
 # 4. PAINEL DE CONTROLO PREMIUM (Chat Privado com Botões Interativos)
-@bot.message_handler(commands=['start', 'menu', 'alertas'])
+@bot.message_handler(commands=['start', 'menu'])
 def painel_privado(message):
     if message.chat.type != 'private':
-        return # Ignora se for usado acidentalmente no canal principal
+        return 
         
     markup = types.InlineKeyboardMarkup(row_width=2)
     btn_alertas = types.InlineKeyboardButton("⛈️ Configurar Alertas", callback_data='cmd_cidade_info')
