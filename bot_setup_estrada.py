@@ -12,16 +12,19 @@ import threading
 app = Flask('')
 @app.route('/')
 def home():
-    return "🤖 Setup da Estrada: Modo Vendas + Radar Meteorológico a funcionar!"
+    return "🤖 Setup da Estrada: Modo Vendas, Radar e Menu a funcionar!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
 # 2. CREDENCIAIS
-TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVsw'
+TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVSw'
 CANAL_ID = '@setupdaestrada'
 LINK_REVOLUT = 'https://revolut.me/guilhevb38'
+
+# ⚠️ ATENÇÃO: Substitui isto pelo nome de utilizador do teu BOT (aquele que acaba em bot)
+USERNAME_BOT = 'NOME_DO_TEU_BOT_AQUI' 
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -84,7 +87,6 @@ Para te registares, escreve **/cidade** seguido do nome da tua cidade.
 @bot.message_handler(commands=['cidade'])
 def comando_cidade(message):
     try:
-        # Extrair o nome da cidade (ex: tira "/cidade " e fica só "Coimbra")
         cidade = message.text.split(' ', 1)[1].strip()
         chat_id = str(message.chat.id)
         
@@ -99,19 +101,15 @@ def comando_cidade(message):
 # 6. MOTOR DO RADAR (Corre em background)
 def radar_meteorologico():
     print("🌤️ Radar Meteorológico ativado!")
-    cidades_em_alerta = {} # Memória para não spammar se chover o dia todo
-    
-    # Pausa inicial
+    cidades_em_alerta = {} 
     time.sleep(20)
     
     while True:
         try:
             utilizadores = carregar_json('utilizadores.json')
-            # Extrair lista de cidades únicas para não fazer pedidos repetidos à internet
             cidades_unicas = list(set([c.lower() for c in utilizadores.values()]))
             
             for cidade in cidades_unicas:
-                # A: Procurar as coordenadas da cidade (Latitude e Longitude)
                 geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={cidade}&count=1&language=pt&format=json"
                 geo_req = requests.get(geo_url).json()
                 
@@ -120,43 +118,60 @@ def radar_meteorologico():
                     lon = geo_req['results'][0]['longitude']
                     nome_real = geo_req['results'][0]['name']
                     
-                    # B: Pedir a meteorologia atual
                     meteo_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=precipitation,wind_speed_10m"
                     meteo_req = requests.get(meteo_url).json()
                     
-                    chuva_agora = meteo_req['current']['precipitation'] # em milimetros
-                    vento_agora = meteo_req['current']['wind_speed_10m'] # em km/h
+                    chuva_agora = meteo_req['current']['precipitation'] 
+                    vento_agora = meteo_req['current']['wind_speed_10m'] 
                     
-                    # Condições de Alerta: Chove mais de 0.5mm ou ventos acima de 35km/h
                     tempo_mau = chuva_agora >= 0.5 or vento_agora >= 35.0
-                    
                     estado_anterior = cidades_em_alerta.get(cidade, False)
                     
-                    # Se está mau tempo, e ainda NÃO tínhamos avisado
                     if tempo_mau and not estado_anterior:
                         alerta = f"⚠️ **ALERTA DE TEMPORAL: {nome_real.upper()}** ⚠️\n\n🌧️ O radar detetou mudança no tempo agora mesmo! Prepara o impermeável e tem cuidado nas grelhas metálicas e calçadas."
-                        
-                        # Enviar mensagem privada a quem está nesta cidade
                         for u_chat_id, u_cidade in utilizadores.items():
                             if u_cidade.lower() == cidade:
                                 try:
                                     bot.send_message(u_chat_id, text=alerta, parse_mode='Markdown')
                                 except Exception:
-                                    pass # Se a pessoa bloqueou o bot, ignora
-                                    
-                        cidades_em_alerta[cidade] = True # Regista que já avisou
+                                    pass 
+                        cidades_em_alerta[cidade] = True 
                         
-                    # Se o tempo melhorou (Parou de chover e o vento acalmou)
                     elif not tempo_mau and estado_anterior:
-                        cidades_em_alerta[cidade] = False # Limpa a memória para avisar na próxima chuvada
+                        cidades_em_alerta[cidade] = False 
                         
         except Exception as e:
             print(f"⚠️ Erro no Radar: {e}")
             
-        # O Radar faz uma varredura de 60 em 60 minutos
         time.sleep(60 * 60)
 
-# 7. CICLO DE VENDAS DO CANAL (Corre em background)
+# 7. MENU AUTOMÁTICO DE INSTRUÇÕES (Corre em background)
+def auto_menu():
+    print("📋 Auto-Menu ativado!")
+    time.sleep(15) 
+    while True:
+        try:
+            msg = f"""
+🤖 **COMO USAR ESTE CANAL AO MÁXIMO** 🤖
+
+Sabias que podes pedir coisas ao bot a qualquer momento? Clica aqui 👉 @{USERNAME_BOT} ou [neste link](https://t.me/{USERNAME_BOT}) e manda-lhe uma mensagem privada com estes comandos:
+
+🌦️ **/alertas** - Liga o radar de chuva para a tua cidade!
+🌧️ **/chuva** - Pede equipamento apenas para a chuva.
+🔥 **/promo** - Pede um desconto surpresa.
+💡 **/dica** - Pede um truque para as entregas.
+☕ **/cafe** - Ajuda o projeto com um café.
+
+*Testa agora mesmo! Vai ao chat do bot e escreve /alertas* 🚀
+"""
+            bot.send_message(CANAL_ID, text=msg, parse_mode='Markdown', disable_web_page_preview=True)
+        except Exception as e:
+            print(f"⚠️ Erro no Menu: {e}")
+            
+        # AGORA DEFINIDO PARA 2 HORAS (2 horas * 60 minutos * 60 segundos)
+        time.sleep(2 * 60 * 60) 
+
+# 8. CICLO DE VENDAS DO CANAL (Corre em background)
 def auto_poster():
     print("🤖 Auto-Poster ativado!")
     time.sleep(10)
@@ -180,13 +195,14 @@ def auto_poster():
                     bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
         except Exception as e:
             pass
-        time.sleep(3 * 60)
+        time.sleep(30 * 60)
 
-# 8. INICIAR TODAS AS TAREFAS
+# 9. INICIAR TODAS AS TAREFAS
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
     threading.Thread(target=auto_poster, daemon=True).start()
     threading.Thread(target=radar_meteorologico, daemon=True).start()
+    threading.Thread(target=auto_menu, daemon=True).start() 
     
     print("🎧 Bot online e à escuta!")
     bot.polling(non_stop=True)
