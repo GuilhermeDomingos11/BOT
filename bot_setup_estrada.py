@@ -1,4 +1,5 @@
 import telebot
+from telebot import types
 import time
 import random
 import os
@@ -12,7 +13,7 @@ import threading
 app = Flask('')
 @app.route('/')
 def home():
-    return "🤖 Setup da Estrada: Modo Vendas, Radar e Menu a funcionar!"
+    return "🤖 Setup da Estrada: Painel Premium & Radar a funcionar!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
@@ -41,47 +42,60 @@ def guardar_json(ficheiro, dados):
 def formatar_promo(promo):
     return f"🔥 **OPORTUNIDADE** 🔥\n📦 **Produto:** {promo['nome']}\n\n❌ **Preço Habitual:** ~{promo['preco_antigo']}~\n✅ **Preço de Desconto:** {promo['preco_novo']}\n\n👉 **[Ver na Amazon com Desconto]({promo['link']})**"
 
-# 4. COMANDOS DE LOJA E COMUNIDADE (Para o Canal e Privado)
-@bot.message_handler(commands=['promo', 'chuva', 'dica', 'cafe'])
-def comandos_basicos(message):
-    comando = message.text.split()[0].lower()
+# 4. PAINEL DE CONTROLO PREMIUM (Chat Privado com Botões Interativos)
+@bot.message_handler(commands=['start', 'menu', 'alertas'])
+def painel_privado(message):
+    if message.chat.type != 'private':
+        return # Ignora se for usado acidentalmente no canal principal
+        
+    markup = types.InlineKeyboardMarkup(row_width=2)
+    btn_alertas = types.InlineKeyboardButton("⛈️ Configurar Alertas", callback_data='cmd_cidade_info')
+    btn_promo = types.InlineKeyboardButton("🔥 Ver Promoção", callback_data='cmd_promo')
+    btn_chuva = types.InlineKeyboardButton("🌧️ Equipamento Chuva", callback_data='cmd_chuva')
+    btn_dica = types.InlineKeyboardButton("💡 Dica da Estrada", callback_data='cmd_dica')
+    btn_cafe = types.InlineKeyboardButton("☕ Pagar um Café", url=LINK_REVOLUT)
     
-    if comando == '/promo':
+    markup.add(btn_alertas, btn_promo, btn_chuva, btn_dica, btn_cafe)
+    
+    msg = f"""
+⚡ **CENTRO DE COMANDO - SETUP DA ESTRADA** ⚡
+
+Olá, estafeta! Este é o teu painel privado de ferramentas para a estrada. 
+Clica nos botões abaixo para interagir instantaneamente com o sistema:
+    """
+    bot.send_message(message.chat.id, text=msg, parse_mode='Markdown', reply_markup=markup)
+
+# 5. GESTÃO DOS CLIQUES NOS BOTÕES INTERATIVOS
+@bot.callback_query_handler(func=lambda call: True)
+def callback_handler(call):
+    chat_id = call.message.chat.id
+    
+    if call.data == 'cmd_promo':
         produtos = carregar_json('produtos.json')
         if produtos:
             prod = random.choice(produtos)
-            bot.send_photo(message.chat.id, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
+            bot.send_photo(chat_id, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
             
-    elif comando == '/chuva':
+    elif call.data == 'cmd_chuva':
         produtos = carregar_json('produtos.json')
         produtos_chuva = [p for p in produtos if p.get('categoria') == 'chuva']
         if produtos_chuva:
             prod = random.choice(produtos_chuva)
-            bot.send_photo(message.chat.id, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
+            bot.send_photo(chat_id, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
             
-    elif comando == '/dica':
+    elif call.data == 'cmd_dica':
         dicas = carregar_json('dicas.json')
         if dicas:
             dica = random.choice(dicas)
-            bot.send_message(message.chat.id, text=f"💡 **DICA DA ESTRADA** 💡\n\n{dica}", parse_mode='Markdown')
+            bot.send_message(chat_id, text=f"💡 **DICA DA ESTRADA** 💡\n\n{dica}", parse_mode='Markdown')
             
-    elif comando == '/cafe':
-        msg = f"☕ **Gostaste das dicas ou poupaste dinheiro?**\nPodes dar uma força ao projeto pagando-me um café sem taxas pelo Revolut:\n👉 **[Pagar um Café pelo Revolut]({LINK_REVOLUT})**\n\nObrigado e boas entregas! 🚀"
-        bot.send_message(message.chat.id, text=msg, parse_mode='Markdown', disable_web_page_preview=True)
+    elif call.data == 'cmd_cidade_info':
+        aviso = "📍 **RADAR METEOROLÓGICO**\n\nPara ativar os alertas automáticos de chuva, escreve diretamente no chat:\n`/cidade Coimbra` (ou a tua localidade)."
+        bot.send_message(chat_id, text=aviso, parse_mode='Markdown')
+        
+    bot.answer_callback_query(call.id) # Retira o efeito de carregamento do botão
 
-# 5. SISTEMA: ALERTAS METEOROLÓGICOS (Apenas em Privado)
-@bot.message_handler(commands=['alertas'])
-def comando_alertas(message):
-    msg = """
-⛈️ **BEM-VINDO AO RADAR DO ESTAFETA** ⛈️
-
-Nunca mais sejas apanhado de surpresa! O bot vai enviar-te uma mensagem privada sempre que estiver a chegar chuva ou vento forte à tua zona.
-
-Para te registares, escreve **/cidade** seguido do nome da tua cidade.
-*Exemplo:* `/cidade Coimbra` ou `/cidade Lousã`
-    """
-    bot.send_message(message.chat.id, text=msg, parse_mode='Markdown')
-
+# 6. COMANDO DE TEXTO PARA DEFINIR CIDADE
 @bot.message_handler(commands=['cidade'])
 def comando_cidade(message):
     try:
@@ -92,11 +106,11 @@ def comando_cidade(message):
         utilizadores[chat_id] = cidade
         guardar_json('utilizadores.json', utilizadores)
         
-        bot.send_message(message.chat.id, f"✅ **Perfeito!** Estás registado para receber alertas meteorológicos para: **{cidade.title()}**.\nMal o tempo feche, eu aviso-te aqui!")
+        bot.send_message(message.chat.id, f"✅ **Radar Ativo!** Estás registado para receber avisos de temporal em: **{cidade.title()}** 🚀")
     except IndexError:
-        bot.send_message(message.chat.id, "⚠️ Erro! Tens de escrever a cidade. Exemplo: `/cidade Coimbra`", parse_mode='Markdown')
+        bot.send_message(message.chat.id, "⚠️ Erro! Tens de indicar a cidade. Exemplo: `/cidade Coimbra`", parse_mode='Markdown')
 
-# 6. MOTOR DO RADAR (Corre em background)
+# 7. MOTOR DO RADAR (Background)
 def radar_meteorologico():
     print("🌤️ Radar Meteorológico ativado!")
     cidades_em_alerta = {} 
@@ -126,7 +140,7 @@ def radar_meteorologico():
                     estado_anterior = cidades_em_alerta.get(cidade, False)
                     
                     if tempo_mau and not estado_anterior:
-                        alerta = f"⚠️ **ALERTA DE TEMPORAL: {nome_real.upper()}** ⚠️\n\n🌧️ O radar detetou mudança no tempo agora mesmo! Prepara o impermeável e tem cuidado nas grelhas metálicas e calçadas."
+                        alerta = f"⚠️ **ALERTA DE TEMPORAL: {nome_real.upper()}** ⚠️\n\n🌧️ O radar detetou mudança no tempo agora mesmo! Prepara o impermeável e cuidado nas estradas."
                         for u_chat_id, u_cidade in utilizadores.items():
                             if u_cidade.lower() == cidade:
                                 try:
@@ -143,7 +157,7 @@ def radar_meteorologico():
             
         time.sleep(60 * 60)
 
-# 7. MENU AUTOMÁTICO DE INSTRUÇÕES (De 2 em 2 horas)
+# 8. MENU AUTOMÁTICO DE INSTRUÇÕES NO CANAL (De 2 em 2 horas)
 def auto_menu():
     print("📋 Auto-Menu ativado!")
     time.sleep(15) 
@@ -152,15 +166,14 @@ def auto_menu():
             msg = f"""
 🤖 **COMO USAR ESTE CANAL AO MÁXIMO** 🤖
 
-Sabias que podes pedir coisas ao bot a qualquer momento? Clica aqui 👉 @{USERNAME_BOT} ou [neste link](https://t.me/{USERNAME_BOT}) e manda-lhe uma mensagem privada com estes comandos:
+Sabias que tens um assistente pessoal na estrada? Clica em 👉 @{USERNAME_BOT} ou [neste link](https://t.me/{USERNAME_BOT}) para abrir o teu painel privado e interagir com botões automáticos para:
 
-🌦️ **/alertas** - Liga o radar de chuva para a tua cidade!
-🌧️ **/chuva** - Pede equipamento apenas para a chuva.
-🔥 **/promo** - Pede um desconto surpresa.
-💡 **/dica** - Pede um truque para as entregas.
-☕ **/cafe** - Ajuda o projeto com um café.
+⛈️ Ativar o Radar de Chuva na tua cidade
+🔥 Pedir Produtos e Promoções Exclusivas
+🌧️ Ver Equipamento de Proteção
+💡 Consultar Dicas de Entrega
 
-*Testa agora mesmo! Vai ao chat do bot e escreve /alertas* 🚀
+*Acede já ao chat privado e explora o centro de comando!* 🚀
 """
             bot.send_message(CANAL_ID, text=msg, parse_mode='Markdown', disable_web_page_preview=True)
         except Exception as e:
@@ -168,7 +181,7 @@ Sabias que podes pedir coisas ao bot a qualquer momento? Clica aqui 👉 @{USERN
             
         time.sleep(2 * 60 * 60) 
 
-# 8. CICLO DE VENDAS DO CANAL (Corre em background)
+# 9. CICLO DE VENDAS DO CANAL (Background)
 def auto_poster():
     print("🤖 Auto-Poster ativado!")
     time.sleep(10)
@@ -182,7 +195,7 @@ def auto_poster():
                 dica = random.choice(dicas)
                 bot.send_message(CANAL_ID, f"💡 **DICA DA HORA DE ALMOÇO** 💡\n\n{dica}", parse_mode='Markdown')
             elif 20 <= hora_atual <= 23:
-                premium = [p for p in produtos if p.get('premium') == True]
+                premium = [p for p in produtos if p.get('premium'] == True]
                 if premium:
                     prod = random.choice(premium)
                     bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
@@ -195,12 +208,12 @@ def auto_poster():
             
         time.sleep(3 * 60)
 
-# 9. INICIAR TODAS AS TAREFAS
+# 10. INICIAR TODAS AS TAREFAS
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
     threading.Thread(target=auto_poster, daemon=True).start()
     threading.Thread(target=radar_meteorologico, daemon=True).start()
     threading.Thread(target=auto_menu, daemon=True).start() 
     
-    print("🎧 Bot online e à escuta...")
+    print("🎧 Bot online e à escuta com Painel Premium...")
     bot.infinity_polling(skip_pending=True)
