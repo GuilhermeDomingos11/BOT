@@ -19,12 +19,12 @@ def run_flask():
     app.run(host='0.0.0.0', port=port)
 
 # 2. CREDENCIAIS
-TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVSw'
-CANAL_ID = '@setupdaestrada'
+TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVsw'
+CANAL_ID = 'setupdaestrada'
 LINK_REVOLUT = 'https://revolut.me/guilhevb38'
 
 # ⚠️ ATENÇÃO: Substitui isto pelo nome de utilizador do teu BOT (aquele que acaba em bot)
-USERNAME_BOT = 'NOME_DO_TEU_BOT_AQUI' 
+USERNAME_BOT = '@Setup_da_Estrada_Bot' 
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -195,7 +195,7 @@ def auto_poster():
                     bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
         except Exception as e:
             pass
-        time.sleep(30 * 60)
+        time.sleep(2 * 60)
 
 # 9. INICIAR TODAS AS TAREFAS
 if __name__ == "__main__":
