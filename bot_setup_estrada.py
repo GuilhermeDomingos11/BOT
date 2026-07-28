@@ -19,12 +19,10 @@ def run_flask():
     app.run(host='0.0.0.0', port=port)
 
 # 2. CREDENCIAIS
-TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVsw'
-CANAL_ID = 'setupdaestrada'
+TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVSw'
+CANAL_ID = '@setupdaestrada'
 LINK_REVOLUT = 'https://revolut.me/guilhevb38'
-
-# ⚠️ ATENÇÃO: Substitui isto pelo nome de utilizador do teu BOT (aquele que acaba em bot)
-USERNAME_BOT = '@Setup_da_Estrada_Bot' 
+USERNAME_BOT = 'Setup_da_Estrada_Bot' 
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -145,7 +143,7 @@ def radar_meteorologico():
             
         time.sleep(60 * 60)
 
-# 7. MENU AUTOMÁTICO DE INSTRUÇÕES (Corre em background)
+# 7. MENU AUTOMÁTICO DE INSTRUÇÕES (Corre em background - De 2 em 2 horas)
 def auto_menu():
     print("📋 Auto-Menu ativado!")
     time.sleep(15) 
@@ -168,7 +166,6 @@ Sabias que podes pedir coisas ao bot a qualquer momento? Clica aqui 👉 @{USERN
         except Exception as e:
             print(f"⚠️ Erro no Menu: {e}")
             
-        # AGORA DEFINIDO PARA 2 HORAS (2 horas * 60 minutos * 60 segundos)
         time.sleep(2 * 60 * 60) 
 
 # 8. CICLO DE VENDAS DO CANAL (Corre em background)
@@ -185,7 +182,7 @@ def auto_poster():
                 dica = random.choice(dicas)
                 bot.send_message(CANAL_ID, f"💡 **DICA DA HORA DE ALMOÇO** 💡\n\n{dica}", parse_mode='Markdown')
             elif 20 <= hora_atual <= 23:
-                premium = [p for p in produtos if p.get('premium'] == True]
+                premium = [p for p in produtos if p.get('premium') == True]
                 if premium:
                     prod = random.choice(premium)
                     bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
@@ -196,7 +193,7 @@ def auto_poster():
         except Exception as e:
             print(f"⚠️ Erro detalhado no Auto-Poster: {e}")
             
-        time.sleep(3 * 60)
+        time.sleep(30 * 60)
 
 # 9. INICIAR TODAS AS TAREFAS
 if __name__ == "__main__":
@@ -205,6 +202,5 @@ if __name__ == "__main__":
     threading.Thread(target=radar_meteorologico, daemon=True).start()
     threading.Thread(target=auto_menu, daemon=True).start() 
     
-    # Mantém o Bot à escuta de comandos sem crashar por conflitos
     print("🎧 Bot online e à escuta...")
     bot.infinity_polling(skip_pending=True)
