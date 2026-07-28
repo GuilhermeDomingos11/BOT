@@ -185,7 +185,7 @@ def auto_poster():
                 dica = random.choice(dicas)
                 bot.send_message(CANAL_ID, f"💡 **DICA DA HORA DE ALMOÇO** 💡\n\n{dica}", parse_mode='Markdown')
             elif 20 <= hora_atual <= 23:
-                premium = [p for p in produtos if p.get('premium') == True]
+                premium = [p for p in produtos if p.get('premium'] == True]
                 if premium:
                     prod = random.choice(premium)
                     bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
@@ -194,8 +194,9 @@ def auto_poster():
                     prod = random.choice(produtos)
                     bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
         except Exception as e:
-            pass
-        time.sleep(2 * 60)
+            print(f"⚠️ Erro detalhado no Auto-Poster: {e}")
+            
+        time.sleep(3 * 60)
 
 # 9. INICIAR TODAS AS TAREFAS
 if __name__ == "__main__":
