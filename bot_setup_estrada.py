@@ -13,13 +13,13 @@ import threading
 app = Flask('')
 @app.route('/')
 def home():
-    return "🤖 EstafetaBot: Painel Inline, Radar & Estado Inteligente a funcionar!"
+    return "🤖 EstafetaBot: Painel Inline, Radar & Correção de Timers a funcionar!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# 2. CREDENCIAIS (Token fixo e username atualizado)
+# 2. CREDENCIAIS
 TOKEN = '8950805985:AAF0i9-pXNWt47xYFYQaWFAzZMSepQ9G9pc'
 CANAL_ID = '@setupdaestrada'
 LINK_REVOLUT = 'https://revolut.me/guilhevb38'
@@ -27,7 +27,6 @@ USERNAME_BOT = 'oEstafeta_bot'
 
 bot = telebot.TeleBot(TOKEN)
 
-# Conjunto para controlar quem pediu para configurar a cidade
 aguardando_cidade = set()
 
 # 3. GESTÃO DE DADOS (JSON)
@@ -111,7 +110,9 @@ def callback_handler(call):
         
     bot.answer_callback_query(call.id)
     
-    threading.Timer(10.0, enviar_menu_reutilizavel, args=[chat_id]).start()
+    # Só agenda o reaparecimento do menu se NÃO for para configurar a cidade
+    if call.data != 'cmd_cidade_info':
+        threading.Timer(10.0, enviar_menu_reutilizavel, args=[chat_id]).start()
 
 # 6. COMANDO /clear POR TEXTO
 @bot.message_handler(commands=['clear'])
@@ -293,5 +294,5 @@ if __name__ == "__main__":
     threading.Thread(target=radar_meteorologico, daemon=True).start()
     threading.Thread(target=auto_menu, daemon=True).start() 
     
-    print("🎧 EstafetaBot online com erro corrigido...")
+    print("🎧 EstafetaBot online com temporizadores corrigidos...")
     bot.infinity_polling(skip_pending=True)
