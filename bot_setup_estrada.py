@@ -205,5 +205,6 @@ if __name__ == "__main__":
     threading.Thread(target=radar_meteorologico, daemon=True).start()
     threading.Thread(target=auto_menu, daemon=True).start() 
     
-    print("🎧 Bot online e à escuta!")
-    bot.polling(non_stop=True)
+    # Mantém o Bot à escuta de comandos sem crashar por conflitos
+    print("🎧 Bot online e à escuta...")
+    bot.infinity_polling(skip_pending=True)
