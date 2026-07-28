@@ -5,7 +5,9 @@ import os
 from flask import Flask
 import threading
 
-# Servidor Flask simples para manter a aplicação sempre acordada na nuvem
+# -------------------------------------------------------------
+# 1. SERVIDOR FLASK (Para a nuvem não adormecer)
+# -------------------------------------------------------------
 app = Flask('')
 
 @app.route('/')
@@ -17,16 +19,16 @@ def run_flask():
     app.run(host='0.0.0.0', port=port)
 
 # -------------------------------------------------------------
-# 1. CREDENCIAIS E CONFIGURAÇÕES
+# 2. CREDENCIAIS E CONFIGURAÇÕES
 # -------------------------------------------------------------
-TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVSw'
+TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVsw'
 CANAL_ID = '@setupdaestrada'
 TAG_AFILIADO = 'setupdaestrada-21'
 
 bot = telebot.TeleBot(TOKEN)
 
 # -------------------------------------------------------------
-# 2. CATÁLOGO DE PRODUTOS
+# 3. CATÁLOGOS (PRODUTOS E DICAS)
 # -------------------------------------------------------------
 lista_promocoes = [
     {
@@ -80,8 +82,17 @@ lista_promocoes = [
     }
 ]
 
+lista_dicas = [
+    "📦 **Organização da Top Box:** Top boxes rígidas são excelentes para a segurança, mas os pedidos pequenos balançam muito. Leva sempre uma toalha limpa grossa ou plástico de bolhas para preencheres o espaço vazio. Evita molhos derramados em ruas de calçada!",
+    "⛈️ **Tração na Chuva:** A calçada portuguesa molhada e as grelhas de esgoto são os maiores inimigos nas subidas íngremes. Nestes dias, reduz a pressão dos pneus ligeiramente (cerca de 2 a 3 psi) para ganhares mais superfície de contacto e aderência.",
+    "🔋 **Frio e Baterias:** Nos turnos de inverno, o frio drena a bateria do telemóvel até 30% mais rápido. Mantém a tua powerbank perto do corpo (dentro do casaco) e passa apenas o cabo para fora, o calor corporal ajuda a manter a eficiência da bateria.",
+    "🏍️ **Corrente Saudável:** Apanhaste uma bátega de água a meio do turno? Assim que chegares a casa, passa um spray lubrificante na corrente enquanto ela ainda está quente. Evita ferrugem e poupa-te muitos euros na oficina a longo prazo.",
+    "🚦 **Olhos na Estrada:** Em cruzamentos cegos ou entroncamentos apertados, não olhes só para os carros, olha para os reflexos nas montras das lojas. Muitas vezes consegues ver se vem lá um carro antes sequer de ele chegar à esquina.",
+    "🍔 **Gestão de Restaurantes:** O restaurante disse 'são só mais 5 minutinhos'? Aproveita esse tempo para verificares a pressão dos pneus, limpar a viseira do capacete ou responderes a mensagens. O tempo de espera é o teu tempo de manutenção."
+]
+
 # -------------------------------------------------------------
-# 3. FUNÇÃO DE PUBLICAÇÃO
+# 4. FUNÇÕES DE PUBLICAÇÃO
 # -------------------------------------------------------------
 def publicar_promocao(promo):
     mensagem = f"""
@@ -95,50 +106,76 @@ def publicar_promocao(promo):
 👉 **[Ver Opções na Amazon com Desconto]({promo['link']})**
     """
     try:
-        bot.send_photo(
-            chat_id=CANAL_ID, 
-            photo=promo['imagem'], 
-            caption=mensagem, 
-            parse_mode='Markdown'
-        )
-        print(f"✅ Publicado com sucesso: {promo['nome']}")
+        bot.send_photo(chat_id=CANAL_ID, photo=promo['imagem'], caption=mensagem, parse_mode='Markdown')
+        print(f"✅ Produto publicado: {promo['nome']}")
     except Exception as erro:
-        print(f"❌ Erro ao publicar: {erro}")
+        print(f"❌ Erro ao publicar produto: {erro}")
+
+def publicar_dica(dica):
+    mensagem = f"""
+💡 **DICA DA ESTRADA** 💡
+
+{dica}
+
+👉 *Partilha o canal com os teus colegas para não perderem as dicas e os descontos!*
+    """
+    try:
+        bot.send_message(chat_id=CANAL_ID, text=mensagem, parse_mode='Markdown')
+        print("✅ Dica publicada com sucesso!")
+    except Exception as erro:
+        print(f"❌ Erro ao publicar dica: {erro}")
 
 # -------------------------------------------------------------
-# 4. CICLO DO BOT EM BACKGROUND
+# 5. CICLO DO BOT EM BACKGROUND (COM INTELIGÊNCIA)
 # -------------------------------------------------------------
 def loop_bot():
-    print("🤖 Bot 'Setup da Estrada' iniciado em background...")
+    print("🤖 Bot 'Setup da Estrada' iniciado! Misto de Ofertas e Dicas a rodar.")
     historico_recentes = []
+    historico_dicas = []
     
-    # Pausa inicial para garantir que o servidor web subiu primeiro
+    contador_ciclos = 1
+    
+    # Pausa inicial
     time.sleep(10)
     
     while True:
         try:
-            produtos_disponiveis = [p for p in lista_promocoes if p['nome'] not in historico_recentes]
-            if not produtos_disponiveis:
-                produtos_disponiveis = lista_promocoes
-                historico_recentes.clear()
-                
-            produto_escolhido = random.choice(produtos_disponiveis)
-            publicar_promocao(produto_escolhido)
+            # A cada 5 ciclos (ex: 5 produtos publicados), publica uma dica em vez de um produto
+            if contador_ciclos % 5 == 0:
+                dicas_disponiveis = [d for d in lista_dicas if d not in historico_dicas]
+                if not dicas_disponiveis:
+                    dicas_disponiveis = lista_dicas
+                    historico_dicas.clear()
+                    
+                dica_escolhida = random.choice(dicas_disponiveis)
+                publicar_dica(dica_escolhida)
+                historico_dicas.append(dica_escolhida)
             
-            historico_recentes.append(produto_escolhido['nome'])
-            if len(historico_recentes) > 3:
-                historico_recentes.pop(0)
+            # Caso contrário, publica a promoção normal
+            else:
+                produtos_disponiveis = [p for p in lista_promocoes if p['nome'] not in historico_recentes]
+                if not produtos_disponiveis:
+                    produtos_disponiveis = lista_promocoes
+                    historico_recentes.clear()
+                    
+                produto_escolhido = random.choice(produtos_disponiveis)
+                publicar_promocao(produto_escolhido)
+                historico_recentes.append(produto_escolhido['nome'])
+                
+                if len(historico_recentes) > 3:
+                    historico_recentes.pop(0)
+            
+            contador_ciclos += 1
+            
         except Exception as e:
             print(f"⚠️ Erro no ciclo: {e}")
             
-        # Intervalo de 30 minutos entre publicações
-        time.sleep(15 * 60)
+        # Podes alterar este valor. 30 * 60 = 30 minutos.
+        time.sleep(30 * 60)
 
 if __name__ == "__main__":
-    # Arranca o bot do Telegram numa thread separada
     t = threading.Thread(target=loop_bot)
     t.daemon = True
     t.start()
     
-    # Arranca o servidor Flask na thread principal (obrigatório para o Render)
     run_flask()
