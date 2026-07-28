@@ -23,7 +23,7 @@ def run_flask():
 TOKEN = '8950805985:AAF0i9-pXNWt47xYFYQaWFAzZMSepQ9G9pc'
 CANAL_ID = '@setupdaestrada'
 LINK_REVOLUT = 'https://revolut.me/guilhevb38'
-USERNAME_BOT = 'EstafetaBot' 
+USERNAME_BOT = 'oEstafeta_bot' 
 
 bot = telebot.TeleBot(TOKEN)
 
