@@ -13,7 +13,7 @@ import threading
 app = Flask('')
 @app.route('/')
 def home():
-    return "🤖 EstafetaBot: Painel Inline, Radar & Proteção Anti-Conflito a funcionar!"
+    return "🤖 EstafetaBot: Painel Inline, Radar & Webhook Limpo a funcionar!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
@@ -283,21 +283,12 @@ Lá encontras botões interativos para:
 # 10. CICLO DE VENDAS DO CANAL (Background)
 def auto_poster():
     print("🤖 Auto-Poster ativado!")
-    time.sleep(5)
-    
-    # Mensagem de teste imediata para confirmar que o bot consegue publicar no canal
-    try:
-        bot.send_message(CANAL_ID, "🟢 **SISTEMA ONLINE:** O EstafetaBot já está a monitorizar a estrada e as promoções!", parse_mode='Markdown')
-    except Exception as e:
-        print(f"⚠️ Erro ao enviar mensagem inicial para o canal: {e}")
-
+    time.sleep(10)
     while True:
         try:
             hora_atual = datetime.now().hour
             produtos = carregar_json('produtos.json')
             dicas = carregar_json('dicas.json')
-            
-            print(produtos) # Vai mostrar no log do Render quantos produtos tens carregados
             
             if 12 <= hora_atual <= 14 and dicas:
                 dica = random.choice(dicas)
@@ -320,9 +311,9 @@ def auto_poster():
         except Exception as e:
             print(f"⚠️ Erro detalhado no Auto-Poster: {e}")
             
-        time.sleep(3 * 60) # Intervalo de 30 minutos entre promoções
+        time.sleep(30 * 60)
 
-# 11. INICIAR TODAS AS TAREFAS
+# 11. INICIAR TODAS AS TAREFAS (Com limpeza de webhook e anti-conflito)
 if __name__ == "__main__":
     threading.Thread(target=run_flask, daemon=True).start()
     threading.Thread(target=auto_poster, daemon=True).start()
@@ -331,7 +322,7 @@ if __name__ == "__main__":
     
     print("🎧 EstafetaBot online com limpeza de webhook...")
     
-    # Força a remoção de qualquer webhook preso para o polling funcionar sem conflito 409
+    # Remove qualquer webhook ativo para o polling funcionar sem erro 409
     try:
         bot.remove_webhook()
     except Exception:
@@ -343,4 +334,3 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"⚠️ Conflito detetado ({e}). A reiniciar a ligação em 5 segundos...")
             time.sleep(5)
-
