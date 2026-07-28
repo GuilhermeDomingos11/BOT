@@ -20,7 +20,7 @@ def run_flask():
     app.run(host='0.0.0.0', port=port)
 
 # 2. CREDENCIAIS
-TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVSw'
+TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVsw'
 CANAL_ID = '@setupdaestrada'
 LINK_REVOLUT = 'https://revolut.me/guilhevb38'
 USERNAME_BOT = 'Setup_da_Estrada_Bot' 
