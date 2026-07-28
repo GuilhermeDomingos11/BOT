@@ -3,6 +3,7 @@ import time
 import random
 import os
 import json
+import requests
 from datetime import datetime
 from flask import Flask
 import threading
@@ -11,116 +12,181 @@ import threading
 app = Flask('')
 @app.route('/')
 def home():
-    return "🤖 Servidor Flask e Bot a funcionar em simultâneo!"
+    return "🤖 Setup da Estrada: Modo Vendas + Radar Meteorológico a funcionar!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
-# 2. CREDENCIAIS E LINKS
+# 2. CREDENCIAIS
 TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVsw'
 CANAL_ID = '@setupdaestrada'
-LINK_REVOLUT = 'https://revolut.me/guilhevb38' # Substitui pelo teu link do Revolut
+LINK_REVOLUT = 'https://revolut.me/guilhevb38'
 
 bot = telebot.TeleBot(TOKEN)
 
-# 3. CARREGAR DADOS (ARQUITETURA JSON)
+# 3. GESTÃO DE DADOS (JSON)
 def carregar_json(ficheiro):
-    with open(ficheiro, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    try:
+        with open(ficheiro, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {} if ficheiro == 'utilizadores.json' else []
 
-# 4. FUNÇÕES DE FORMATAÇÃO
+def guardar_json(ficheiro, dados):
+    with open(ficheiro, 'w', encoding='utf-8') as f:
+        json.dump(dados, f, ensure_ascii=False, indent=4)
+
 def formatar_promo(promo):
-    return f"""
-🔥 **OPORTUNIDADE** 🔥
-📦 **Produto:** {promo['nome']}
+    return f"🔥 **OPORTUNIDADE** 🔥\n📦 **Produto:** {promo['nome']}\n\n❌ **Preço Habitual:** ~{promo['preco_antigo']}~\n✅ **Preço de Desconto:** {promo['preco_novo']}\n\n👉 **[Ver na Amazon com Desconto]({promo['link']})**"
 
-❌ **Preço Habitual:** ~{promo['preco_antigo']}~
-✅ **Preço de Desconto:** {promo['preco_novo']}
+# 4. COMANDOS DE LOJA E COMUNIDADE (Para o Canal e Privado)
+@bot.message_handler(commands=['promo', 'chuva', 'dica', 'cafe'])
+def comandos_basicos(message):
+    comando = message.text.split()[0].lower()
+    
+    if comando == '/promo':
+        produtos = carregar_json('produtos.json')
+        if produtos:
+            prod = random.choice(produtos)
+            bot.send_photo(message.chat.id, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
+            
+    elif comando == '/chuva':
+        produtos = carregar_json('produtos.json')
+        produtos_chuva = [p for p in produtos if p.get('categoria') == 'chuva']
+        if produtos_chuva:
+            prod = random.choice(produtos_chuva)
+            bot.send_photo(message.chat.id, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
+            
+    elif comando == '/dica':
+        dicas = carregar_json('dicas.json')
+        if dicas:
+            dica = random.choice(dicas)
+            bot.send_message(message.chat.id, text=f"💡 **DICA DA ESTRADA** 💡\n\n{dica}", parse_mode='Markdown')
+            
+    elif comando == '/cafe':
+        msg = f"☕ **Gostaste das dicas ou poupaste dinheiro?**\nPodes dar uma força ao projeto pagando-me um café sem taxas pelo Revolut:\n👉 **[Pagar um Café pelo Revolut]({LINK_REVOLUT})**\n\nObrigado e boas entregas! 🚀"
+        bot.send_message(message.chat.id, text=msg, parse_mode='Markdown', disable_web_page_preview=True)
 
-👉 **[Ver na Amazon com Desconto]({promo['link']})**
-"""
+# 5. NOVO SISTEMA: ALERTAS METEOROLÓGICOS (Apenas em Privado)
+@bot.message_handler(commands=['alertas'])
+def comando_alertas(message):
+    msg = """
+⛈️ **BEM-VINDO AO RADAR DO ESTAFETA** ⛈️
 
-# 5. COMANDOS INTERATIVOS DO UTILIZADOR
-@bot.message_handler(commands=['promo'])
-def comando_promo(message):
-    produtos = carregar_json('produtos.json')
-    produto = random.choice(produtos)
-    bot.send_photo(message.chat.id, photo=produto['imagem'], caption=formatar_promo(produto), parse_mode='Markdown')
+Nunca mais sejas apanhado de surpresa! O bot vai enviar-te uma mensagem privada sempre que estiver a chegar chuva ou vento forte à tua zona.
 
-@bot.message_handler(commands=['chuva'])
-def comando_chuva(message):
-    produtos = carregar_json('produtos.json')
-    produtos_chuva = [p for p in produtos if p.get('categoria') == 'chuva']
-    if produtos_chuva:
-        produto = random.choice(produtos_chuva)
-        bot.send_photo(message.chat.id, photo=produto['imagem'], caption=formatar_promo(produto), parse_mode='Markdown')
-
-@bot.message_handler(commands=['dica'])
-def comando_dica(message):
-    dicas = carregar_json('dicas.json')
-    dica = random.choice(dicas)
-    msg = f"💡 **DICA DA ESTRADA** 💡\n\n{dica}"
+Para te registares, escreve **/cidade** seguido do nome da tua cidade.
+*Exemplo:* `/cidade Coimbra` ou `/cidade Lousã`
+    """
     bot.send_message(message.chat.id, text=msg, parse_mode='Markdown')
 
-@bot.message_handler(commands=['cafe'])
-def comando_cafe(message):
-    msg = f"""
-☕ **Gostaste das dicas ou poupaste dinheiro com o bot?** 
+@bot.message_handler(commands=['cidade'])
+def comando_cidade(message):
+    try:
+        # Extrair o nome da cidade (ex: tira "/cidade " e fica só "Coimbra")
+        cidade = message.text.split(' ', 1)[1].strip()
+        chat_id = str(message.chat.id)
+        
+        utilizadores = carregar_json('utilizadores.json')
+        utilizadores[chat_id] = cidade
+        guardar_json('utilizadores.json', utilizadores)
+        
+        bot.send_message(message.chat.id, f"✅ **Perfeito!** Estás registado para receber alertas meteorológicos para: **{cidade.title()}**.\nMal o tempo feche, eu aviso-te aqui!")
+    except IndexError:
+        bot.send_message(message.chat.id, "⚠️ Erro! Tens de escrever a cidade. Exemplo: `/cidade Coimbra`", parse_mode='Markdown')
 
-Se quiseres dar uma força ao projeto, podes pagar-me um café rapidamente e sem taxas através do Revolut:
-👉 **[Pagar um Café pelo Revolut]({LINK_REVOLUT})**
-
-Obrigado pela força e boas entregas! 🚀
-"""
-    bot.send_message(message.chat.id, text=msg, parse_mode='Markdown', disable_web_page_preview=True)
-
-# 6. CICLO INTELIGENTE AUTOMÁTICO (THREAD SEPARADA)
-def auto_poster():
-    print("🤖 Modo Automático Iniciado.")
-    time.sleep(10)
+# 6. MOTOR DO RADAR (Corre em background)
+def radar_meteorologico():
+    print("🌤️ Radar Meteorológico ativado!")
+    cidades_em_alerta = {} # Memória para não spammar se chover o dia todo
     
+    # Pausa inicial
+    time.sleep(20)
+    
+    while True:
+        try:
+            utilizadores = carregar_json('utilizadores.json')
+            # Extrair lista de cidades únicas para não fazer pedidos repetidos à internet
+            cidades_unicas = list(set([c.lower() for c in utilizadores.values()]))
+            
+            for cidade in cidades_unicas:
+                # A: Procurar as coordenadas da cidade (Latitude e Longitude)
+                geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={cidade}&count=1&language=pt&format=json"
+                geo_req = requests.get(geo_url).json()
+                
+                if 'results' in geo_req:
+                    lat = geo_req['results'][0]['latitude']
+                    lon = geo_req['results'][0]['longitude']
+                    nome_real = geo_req['results'][0]['name']
+                    
+                    # B: Pedir a meteorologia atual
+                    meteo_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=precipitation,wind_speed_10m"
+                    meteo_req = requests.get(meteo_url).json()
+                    
+                    chuva_agora = meteo_req['current']['precipitation'] # em milimetros
+                    vento_agora = meteo_req['current']['wind_speed_10m'] # em km/h
+                    
+                    # Condições de Alerta: Chove mais de 0.5mm ou ventos acima de 35km/h
+                    tempo_mau = chuva_agora >= 0.5 or vento_agora >= 35.0
+                    
+                    estado_anterior = cidades_em_alerta.get(cidade, False)
+                    
+                    # Se está mau tempo, e ainda NÃO tínhamos avisado
+                    if tempo_mau and not estado_anterior:
+                        alerta = f"⚠️ **ALERTA DE TEMPORAL: {nome_real.upper()}** ⚠️\n\n🌧️ O radar detetou mudança no tempo agora mesmo! Prepara o impermeável e tem cuidado nas grelhas metálicas e calçadas."
+                        
+                        # Enviar mensagem privada a quem está nesta cidade
+                        for u_chat_id, u_cidade in utilizadores.items():
+                            if u_cidade.lower() == cidade:
+                                try:
+                                    bot.send_message(u_chat_id, text=alerta, parse_mode='Markdown')
+                                except Exception:
+                                    pass # Se a pessoa bloqueou o bot, ignora
+                                    
+                        cidades_em_alerta[cidade] = True # Regista que já avisou
+                        
+                    # Se o tempo melhorou (Parou de chover e o vento acalmou)
+                    elif not tempo_mau and estado_anterior:
+                        cidades_em_alerta[cidade] = False # Limpa a memória para avisar na próxima chuvada
+                        
+        except Exception as e:
+            print(f"⚠️ Erro no Radar: {e}")
+            
+        # O Radar faz uma varredura de 60 em 60 minutos
+        time.sleep(60 * 60)
+
+# 7. CICLO DE VENDAS DO CANAL (Corre em background)
+def auto_poster():
+    print("🤖 Auto-Poster ativado!")
+    time.sleep(10)
     while True:
         try:
             hora_atual = datetime.now().hour
             produtos = carregar_json('produtos.json')
             dicas = carregar_json('dicas.json')
             
-            # Lógica de Horários
-            if 12 <= hora_atual <= 14:
-                # Hora de almoço: Postar uma dica
+            if 12 <= hora_atual <= 14 and dicas:
                 dica = random.choice(dicas)
                 bot.send_message(CANAL_ID, f"💡 **DICA DA HORA DE ALMOÇO** 💡\n\n{dica}", parse_mode='Markdown')
-            
             elif 20 <= hora_atual <= 23:
-                # Noite: Postar produtos Premium (maior comissão quando o pessoal está em casa)
                 premium = [p for p in produtos if p.get('premium') == True]
                 if premium:
                     prod = random.choice(premium)
                     bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
-            
             else:
-                # Resto do dia: Publicação normal
-                prod = random.choice(produtos)
-                bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
-                
+                if produtos:
+                    prod = random.choice(produtos)
+                    bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
         except Exception as e:
-            print(f"⚠️ Erro no Auto-Poster: {e}")
-            
-        time.sleep(30 * 60) # Pausa de 30 minutos
+            pass
+        time.sleep(3 * 60)
 
-# 7. INICIAR TODAS AS TAREFAS
+# 8. INICIAR TODAS AS TAREFAS
 if __name__ == "__main__":
-    # Arranca o servidor Flask
-    t_flask = threading.Thread(target=run_flask)
-    t_flask.daemon = True
-    t_flask.start()
+    threading.Thread(target=run_flask, daemon=True).start()
+    threading.Thread(target=auto_poster, daemon=True).start()
+    threading.Thread(target=radar_meteorologico, daemon=True).start()
     
-    # Arranca as publicações automáticas
-    t_poster = threading.Thread(target=auto_poster)
-    t_poster.daemon = True
-    t_poster.start()
-    
-    # Mantém o Bot à escuta dos comandos dos utilizadores
-    print("🎧 Bot à escuta de comandos...")
+    print("🎧 Bot online e à escuta!")
     bot.polling(non_stop=True)
