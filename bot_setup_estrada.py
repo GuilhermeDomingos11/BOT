@@ -45,9 +45,8 @@ def guardar_json(ficheiro, dados):
 def formatar_promo(promo):
     return f"🔥 **OPORTUNIDADE** 🔥\n📦 **Produto:** {promo['nome']}\n\n❌ **Preço Habitual:** ~{promo['preco_antigo']}~\n✅ **Preço de Desconto:** {promo['preco_novo']}\n\n👉 **[Ver na Amazon com Desconto]({promo['link']})**"
 
-# Função para reenviar o painel de botões inline
+# Função para reenviar o painel de botões inline (apenas um menu por chat)
 def enviar_menu_reutilizavel(chat_id):
-    # Remove o timer ativo para este chat se já disparou
     if chat_id in active_timers:
         del active_timers[chat_id]
         
@@ -67,7 +66,7 @@ def enviar_menu_reutilizavel(chat_id):
     except Exception:
         pass
 
-# Função inteligente para gerir o temporizador único (cancela o anterior se existir)
+# Função inteligente para gerir o temporizador único (cancela o anterior e evita duplicações)
 def agendar_reaparecimento_menu(chat_id):
     if chat_id in active_timers:
         try:
@@ -197,7 +196,6 @@ def capturar_texto_livre(message):
 """
             bot.send_message(chat_id, resposta, parse_mode='Markdown')
             
-            # Agenda o reaparecimento do menu após configurar a cidade com segurança
             if chat_id in active_timers:
                 active_timers[chat_id].cancel()
             t = threading.Timer(3.0, enviar_menu_reutilizavel, args=[chat_id])
@@ -297,7 +295,7 @@ def auto_poster():
                 dica = random.choice(dicas)
                 bot.send_message(CANAL_ID, f"💡 **DICA DA HORA DE ALMOÇO** 💡\n\n{dica}", parse_mode='Markdown')
             elif 20 <= hora_atual <= 23:
-                premium = [p for p in produtos if p.get('premium'] == True]
+                premium = [p for p in produtos if p.get('premium') == True]
                 if premium:
                     prod = random.choice(premium)
                     bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
@@ -308,7 +306,7 @@ def auto_poster():
         except Exception as e:
             print(f"⚠️ Erro detalhado no Auto-Poster: {e}")
             
-        time.sleep(3 * 60)
+        time.sleep(30 * 60)
 
 # 11. INICIAR TODAS AS TAREFAS
 if __name__ == "__main__":
@@ -317,5 +315,5 @@ if __name__ == "__main__":
     threading.Thread(target=radar_meteorologico, daemon=True).start()
     threading.Thread(target=auto_menu, daemon=True).start() 
     
-    print("🎧 EstafetaBot online com controlo de temporizadores únicos...")
+    print("🎧 EstafetaBot online com sintaxe corrigida e timers unificados...")
     bot.infinity_polling(skip_pending=True)
