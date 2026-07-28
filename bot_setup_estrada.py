@@ -23,7 +23,7 @@ def run_flask():
 TOKEN = '8898446380:AAGUG8IDi-XV2cUx3M9BqZFw-z9CIcSJVsw'
 CANAL_ID = '@setupdaestrada'
 LINK_REVOLUT = 'https://revolut.me/guilhevb38'
-USERNAME_BOT = 'Setup_da_Estrada_Bot' 
+USERNAME_BOT = 'Setup_da_Estrada_Bot' # Username correto com sublinhados
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -42,7 +42,7 @@ def guardar_json(ficheiro, dados):
 def formatar_promo(promo):
     return f"🔥 **OPORTUNIDADE** 🔥\n📦 **Produto:** {promo['nome']}\n\n❌ **Preço Habitual:** ~{promo['preco_antigo']}~\n✅ **Preço de Desconto:** {promo['preco_novo']}\n\n👉 **[Ver na Amazon com Desconto]({promo['link']})**"
 
-# 4. TECLADO FIXO NO FUNDO DO CHAT (Interface sem precisar de escrever)
+# 4. TECLADO FIXO NO FUNDO DO CHAT
 def criar_teclado_inferior():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     btn_promo = types.KeyboardButton("🔥 Ver Promoção")
@@ -64,11 +64,11 @@ def painel_privado(message):
     msg = f"""
 ⚡ **CENTRO DE COMANDO - SETUP DA ESTRADA** ⚡
 
-Olá, estafeta! Este é o teu painel privado. Poca nos **botões em baixo** no teu telemóvel para aceder a tudo instantaneamente, sem precisar de escrever nada! 🚀
+Olá, estafeta! Este é o teu painel privado. Clica nos **botões em baixo** no teu telemóvel para aceder a tudo instantaneamente, sem precisar de escrever nada! 🚀
     """
     bot.send_message(message.chat.id, text=msg, parse_mode='Markdown', reply_markup=criar_teclado_inferior())
 
-# 6. INTERAÇÃO POR BOTÕES FIXOS (Substitui os comandos de texto)
+# 6. INTERAÇÃO POR BOTÕES FIXOS
 @bot.message_handler(func=lambda message: message.text in [
     "🔥 Ver Promoção", 
     "🌧️ Equipamento Chuva", 
@@ -119,7 +119,6 @@ def lidar_botoes_fixos(message):
 # 7. GESTÃO DO TEXTO DA CIDADE (Para o Radar)
 @bot.message_handler(func=lambda message: message.chat.type == 'private')
 def capturar_cidade(message):
-    # Se o utilizador escrever o nome de uma cidade diretamente (sem ser botão)
     cidade = message.text.strip()
     chat_id = str(message.chat.id)
     
@@ -185,14 +184,15 @@ def auto_menu():
             msg = f"""
 🤖 **COMO USAR ESTE CANAL AO MÁXIMO** 🤖
 
-Sabias que tens um assistente pessoal na estrada? Clica em 👉 @{USERNAME_BOT} ou [neste link](https://t.me/{USERNAME_BOT}) para abrir o teu painel privado. Lá tens botões interativos fixos no fundo para:
+Sabias que tens um assistente pessoal na estrada? Clica em 👉 @{USERNAME_BOT} ou [neste link](https://t.me/{USERNAME_BOT}) para abrir o teu painel privado. 
 
+Lá em baixo tens botões interativos fixos no ecrã para:
 ⛈️ Ativar o Radar de Chuva
 🔥 Ver Produtos e Promoções
 🌧️ Ver Equipamento de Proteção
 💡 Consultar Dicas de Entrega
 
-*Acede já ao chat privado e explora o centro de comando com um clique!* 🚀
+*Acede já ao chat privado e usa os botões com um clique!* 🚀
 """
             bot.send_message(CANAL_ID, text=msg, parse_mode='Markdown', disable_web_page_preview=True)
         except Exception as e:
@@ -214,7 +214,7 @@ def auto_poster():
                 dica = random.choice(dicas)
                 bot.send_message(CANAL_ID, f"💡 **DICA DA HORA DE ALMOÇO** 💡\n\n{dica}", parse_mode='Markdown')
             elif 20 <= hora_atual <= 23:
-                premium = [p for p in produtos if p.get('premium') == True]
+                premium = [p for p in produtos if p.get('premium'] == True]
                 if premium:
                     prod = random.choice(premium)
                     bot.send_photo(CANAL_ID, photo=prod['imagem'], caption=formatar_promo(prod), parse_mode='Markdown')
@@ -234,5 +234,5 @@ if __name__ == "__main__":
     threading.Thread(target=radar_meteorologico, daemon=True).start()
     threading.Thread(target=auto_menu, daemon=True).start() 
     
-    print("🎧 Bot online com Teclado Persistente e Menu de Botões...")
+    print("🎧 Bot online com Teclado Persistente e Menu corrigido...")
     bot.infinity_polling(skip_pending=True)
